@@ -49,10 +49,13 @@ a predictor, a list with the following elements
 build an xgboost cross validation classification model with k-fold cross-validation
 }
 \examples{
-target <- data.frame(id=1:1000, target_class=rep(c(0,1), each=500), sex=rep(0:1, 500))
-features <- data.frame(id=1:500, a=rnorm(500), b=rnorm(500)) \%>\% 
-       bind_rows(
-            data.frame(id=501:1000, a=rnorm(500, mean=0.5, sd=2), b=rnorm(500, mean=-0.5, sd=2)))
-predictor <- build_cross_validation_classification_model(target, features, folds=3)
-ggplot(predictor$test, aes(x=predict, colour=factor(target_class))) + geom_density() + theme_bw()
+target <- data.frame(id = 1:1000, target_class = rep(c(0, 1), each = 500), sex = rep(0:1, 500))
+features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) \%>\%
+    bind_rows(
+        data.frame(id = 501:1000, a = rnorm(500, mean = 0.5, sd = 2), b = rnorm(500, mean = -0.5, sd = 2))
+    )
+predictor <- build_cross_validation_classification_model(target, features, folds = 3)
+ggplot(predictor$test, aes(x = predict, colour = factor(target_class))) +
+    geom_density() +
+    theme_bw()
 }

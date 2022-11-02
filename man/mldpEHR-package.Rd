@@ -11,6 +11,11 @@ A toolkit for building and testing lifelong prediction models for all cause mort
 \author{
 \strong{Maintainer}: Netta Mendelson-Cohen \email{netta.mendelsoncohen@weizmann.ac.il}
 
+Authors:
+\itemize{
+  \item Aviezer Lifshitz \email{aviezer.lifshitz@weizmann.ac.il}
+}
+
 Other contributors:
 \itemize{
   \item Weizmann Institute of Science [copyright holder]

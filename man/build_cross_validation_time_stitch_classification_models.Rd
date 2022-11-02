@@ -39,3 +39,25 @@ a list of predictors, according to provided target_list
 \description{
 build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previoud model
 }
+\examples{
+
+# build base predictor
+target <- data.frame(id = 1:1000, target_class = rep(c(0, 1), each = 500), sex = rep(0:1, 500))
+features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) \%>\%
+    bind_rows(
+        data.frame(id = 501:1000, a = rnorm(500, mean = 2, sd = 2), b = rnorm(500, mean = -2, sd = 2))
+    )
+predictor <- build_cross_validation_classification_model(target, features, folds = 3)
+target_list <- purrr::map(1:3, ~ data.frame(id = 1:1000, target_class = NA, sex = rep(0:1, 500))) \%>\% setNames(1:3)
+feature_list <- purrr::map(1:3, ~ data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) \%>\%
+    bind_rows(
+        data.frame(id = 501:1000, a = rnorm(500, mean = 2, sd = 1), b = rnorm(500, mean = -2, sd = 1))
+    )) \%>\% setNames(1:3)
+predictors <- build_cross_validation_time_stitch_classification_models(0, predictor, target_list, feature_list, q_thresh = 0.5)
+test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\% mutate(n = .y))
+ggplot(test, aes(x = predict, colour = factor(target_class))) +
+    facet_wrap(~n, nrow = 1) +
+    geom_density() +
+    theme_bw()
+
+}
