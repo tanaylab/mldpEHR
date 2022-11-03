@@ -2,7 +2,9 @@
 % Please edit documentation in R/markov_model.R
 \name{build_mortality_markov_model}
 \alias{build_mortality_markov_model}
-\title{build an Markov probability model from multi-age prediction models}
+\title{build an Markov probability model from multi-age prediction models
+To implement this, all patients at a given age will be binned according to their model score (using quantiles).
+Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state'}
 \usage{
 build_mortality_markov_model(
   models,
@@ -47,4 +49,6 @@ a list of markov models (per age), each is a list with the following members:
 }
 \description{
 build an Markov probability model from multi-age prediction models
+To implement this, all patients at a given age will be binned according to their model score (using quantiles).
+Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state'
 }
