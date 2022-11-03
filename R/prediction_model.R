@@ -81,7 +81,11 @@ build_cross_validation_classification_model <- function(target,
     })
     model <- purrr::map(model_folds, ~ .x$model)
     train <- purrr::map_df(model_folds, ~ .x$train)
-    test <- purrr::map_df(model_folds, ~ .x$test) %>% mutate(qpredict = ecdf(predict)(predict))
+    test <- purrr::map_df(model_folds, ~ .x$test) %>% 
+        left_join(target %>% select(id, sex)) %>% 
+        group_by(sex) %>% 
+        mutate(qpredict = ecdf(predict)(predict)) %>% 
+        ungroup
     return(list(model = model, test = test, train = train, target = target, features = features, xgboost_params = xgboost_params, nrounds = nrounds))
 }
 
