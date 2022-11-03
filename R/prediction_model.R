@@ -45,7 +45,7 @@ build_cross_validation_classification_model <- function(target,
     if (!"fold" %in% colnames(target)) {
         target$fold <- NA
     }
-    target <- target %>%
+    target_fold <- target %>%
         filter(is.na(fold)) %>%
         group_by(sex, target_class) %>%
         mutate(fold = sample(1:folds, n(), replace = TRUE)) %>%
@@ -54,8 +54,8 @@ build_cross_validation_classification_model <- function(target,
         bind_rows(target %>% filter(!is.na(fold)) %>% select(id, target_class, fold))
 
 
-    target_features <- target %>% left_join(features, by = "id")
-    model_folds <- purrr::map(1:max(target$fold), function(cur_fold) {
+    target_features <- target_fold %>% left_join(features, by = "id")
+    model_folds <- purrr::map(1:max(target_fold$fold), function(cur_fold) {
         message(cur_fold)
         dtrain <- xgboost::xgb.DMatrix(
             data = as.matrix(target_features %>% filter(fold != cur_fold, !is.na(target_class)) %>% select(-id, -fold, -target_class)),

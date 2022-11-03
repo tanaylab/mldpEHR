@@ -1,4 +1,6 @@
 #' build an Markov probability model from multi-age prediction models
+#' To implement this, all patients at a given age will be binned according to their model score (using quantiles).
+#' Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state'
 #' @param models - list of prediction models (output of build_cross_validation_time_stitch_classification_models)
 #' @param follow_time - list of data.frames per age, defining for each patient how much follow-up time they had. Dataframe must include the following columns:
 #' - id
@@ -45,7 +47,7 @@ build_mortality_markov_model <- function(models, follow_time, outcome, step, qbi
             mutate(sbin=as.numeric(cut(qpredict, qbins, right=FALSE, include.lowest=TRUE))) %>%
             mutate(sbin=factor(sbin, levels=c(1:(length(qbins)-1), "no_score")))
     pm <- follow %>% # contains all patients
-        left_join(m %>% select(-target_class), by=c("id")) %>% 
+        left_join(m %>% select(-target_class), by=c("id", "sex")) %>% 
         mutate(sbin=replace_na(sbin, "no_score")) %>% 
         left_join(markov$target %>% select(id, target_sbin))
 
@@ -111,7 +113,7 @@ build_mortality_markov_model <- function(models, follow_time, outcome, step, qbi
             mutate(sbin=as.numeric(cut(qpredict, qbins, right=FALSE, include.lowest=TRUE))) %>%
             mutate(sbin=factor(sbin, levels=c(1:(length(qbins)-1), "no_score")))
     pm <- follow %>% # contains all patients
-        left_join(m %>% select(-target_class), by=c("id")) %>% 
+        left_join(m %>% select(-target_class), by=c("id", "sex")) %>% 
         mutate(sbin=replace_na(sbin, "no_score")) %>%  #adding missing data patients
         left_join(target, by="target_class") 
 
