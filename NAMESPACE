@@ -2,4 +2,6 @@
 
 export(build_cross_validation_classification_model)
 export(build_cross_validation_time_stitch_classification_models)
+export(build_mortality_markov_model)
 import(dplyr)
+import(tidyr)

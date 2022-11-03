@@ -5,4 +5,6 @@
 ## usethis namespace: end
 
 #' @import dplyr
+#' @import tidyr
+
 NULL

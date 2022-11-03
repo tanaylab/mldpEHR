@@ -41,6 +41,8 @@ build an xgboost cross validation classification model with k-fold cross-validat
 }
 \examples{
 
+library(dplyr)
+library(ggplot2)
 # build base predictor
 target <- data.frame(id = 1:1000, target_class = rep(c(0, 1), each = 500), sex = rep(0:1, 500))
 features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) \%>\%

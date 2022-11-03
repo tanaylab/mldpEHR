@@ -13,6 +13,8 @@
 #' - xgboost_params - the set of parameters used in xgboost
 #' - nrounds - number of training iterations conducted
 #' @examples
+#' library(dplyr)
+#' library(ggplot2)
 #' target <- data.frame(id = 1:1000, target_class = rep(c(0, 1), each = 500), sex = rep(0:1, 500))
 #' features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) %>%
 #'     bind_rows(
@@ -93,6 +95,8 @@ build_cross_validation_classification_model <- function(target,
 #' @return a list of predictors, according to provided target_list
 #' @examples
 #'
+#' library(dplyr)
+#' library(ggplot2)
 #' # build base predictor
 #' target <- data.frame(id = 1:1000, target_class = rep(c(0, 1), each = 500), sex = rep(0:1, 500))
 #' features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) %>%
