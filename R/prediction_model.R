@@ -55,8 +55,10 @@ build_cross_validation_classification_model <- function(target,
 
 
     target_features <- target_fold %>% left_join(features, by = "id")
-    pb <- progress::progress_bar$new(format = "  Training [:bar] :current/:total (:percent) in :elapsed", 
-        total=folds, clear=FALSE, width=60,show_after = 0)
+    pb <- progress::progress_bar$new(
+        format = "  Training [:bar] :current/:total (:percent) in :elapsed",
+        total = folds, clear = FALSE, width = 60, show_after = 0
+    )
     invisible(pb$tick(0))
     model_folds <- purrr::map(1:max(target_fold$fold), function(cur_fold) {
         pb$tick()
@@ -85,11 +87,11 @@ build_cross_validation_classification_model <- function(target,
     })
     model <- purrr::map(model_folds, ~ .x$model)
     train <- purrr::map_df(model_folds, ~ .x$train)
-    test <- purrr::map_df(model_folds, ~ .x$test) %>% 
-        left_join(target %>% select(id, sex), by="id") %>% 
-        group_by(sex) %>% 
-        mutate(qpredict = ecdf(predict)(predict)) %>% 
-        ungroup
+    test <- purrr::map_df(model_folds, ~ .x$test) %>%
+        left_join(target %>% select(id, sex), by = "id") %>%
+        group_by(sex) %>%
+        mutate(qpredict = ecdf(predict)(predict)) %>%
+        ungroup()
     return(list(model = model, test = test, train = train, target = target, features = features, xgboost_params = xgboost_params, nrounds = nrounds))
 }
 
