@@ -47,9 +47,10 @@ build_mortality_markov_model <- function(models, follow_time, outcome, step, qbi
             mutate(sbin=as.numeric(cut(qpredict, qbins, right=FALSE, include.lowest=TRUE))) %>%
             mutate(sbin=factor(sbin, levels=c(1:(length(qbins)-1), "no_score")))
     pm <- follow %>% # contains all patients
+#        filter(!is.na(survival) | time_in_system > step) %>% #assumes that people that leave the system are not more/less prone to die
         left_join(m %>% select(-target_class), by=c("id", "sex")) %>% 
         mutate(sbin=replace_na(sbin, "no_score")) %>% 
-        left_join(markov$target %>% select(id, target_sbin))
+        left_join(markov$target %>% select(id, target_sbin), by="id")
 
     # filtering out patients with missing target. The assumption is that patients who are censored (due to database ending)
     # are not health state dependent and therefore will not affect the estimations
@@ -67,6 +68,7 @@ build_mortality_markov_model <- function(models, follow_time, outcome, step, qbi
     pm$target_sbin[is.na(pm$target_class) & is.na(pm$target_sbin)] <- 'no_score'    
     
     km_model <- plyr::ddply(pm, plyr::.(sbin, sex), function(data) {
+    #    message(data$sex[1], data$sbin[1])
         fit <- cmprsk::cuminc(data$time_in_system, data$target_sbin, cencode="alive")
         ret <- purrr::map2_df(fit, names(fit), ~as.data.frame(.x[1:3]) %>% mutate(name=.y)) %>%
             tidyr::separate(name, into=c('group', 'outcome'), sep=' (?=[^ ]*$)') %>% 
@@ -115,7 +117,8 @@ build_mortality_markov_model <- function(models, follow_time, outcome, step, qbi
     pm <- follow %>% # contains all patients
         left_join(m %>% select(-target_class), by=c("id", "sex")) %>% 
         mutate(sbin=replace_na(sbin, "no_score")) %>%  #adding missing data patients
-        left_join(target, by="target_class") 
+        left_join(target, by="target_class") %>% 
+        filter(!is.na(outcome))
 
     #compute competing risk models for each sex indeptendently according to source bin(sbin)
     km_model <- plyr::ddply(pm, plyr::.(sbin, sex), function(data) {
