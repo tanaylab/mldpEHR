@@ -15,9 +15,11 @@ Depends:
     R (>= 3.0.0)
 Imports:
     dplyr,
+    tidyr,
     plyr,
     xgboost,
     cmprsk,
+    progress,
     ggplot2
 Suggests: 
     testthat (>= 3.0.0)
