@@ -203,7 +203,7 @@ mldpEHR.cv_model_features <- function(predictor) {
     shap_fold <- plyr::adply(1:length(predictor$model), 1, function(fold) {
         model_fold <- predictor$model[[fold]]
         train_features_fold <- predictor$features %>%
-            left_join(predictor$target %>% select(id, fold)) %>%
+            left_join(predictor$target %>% select(id, fold), by = "id") %>%
             filter(fold != !!fold)
         train_features_fold %>%
             select(id) %>%
