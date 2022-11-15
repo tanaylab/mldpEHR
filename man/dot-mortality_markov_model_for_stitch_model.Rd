@@ -4,7 +4,14 @@
 \alias{.mortality_markov_model_for_stitch_model}
 \title{build an Markov probability model from multi-age prediction models}
 \usage{
-.mortality_markov_model_for_stitch_model(markov, model, follow, step, qbins)
+.mortality_markov_model_for_stitch_model(
+  markov,
+  model,
+  follow,
+  step,
+  qbins,
+  min_obs_for_estimate = 10
+)
 }
 \arguments{
 \item{markov}{\itemize{
@@ -31,7 +38,12 @@
 }}
 }
 \value{
-\subsection{a markov models, a list with the following members:}{
+a markov model, a list with the following members:
+\itemize{
+\item model - matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.
+\item local.model - data.frame containing the probability for each quantile(score) bin to reach each of the quantile(score) bins of the next model by age.
+\item qbins -  bins
+\item target - data frame containing the target bin for this age model (to be used as outcome for the younger age model)
 }
 }
 \description{
