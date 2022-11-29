@@ -26,7 +26,7 @@
 #'      followup = .x*5+5)) %>% 
 #'     setNames(seq(80, by=-5, length.out=6))
 #' features <- purrr::map(0:5, ~ data.frame(id = 1:N, 
-#'      a = c(rnorm(N/2),rnorm(N/2, mean = 2, sd = 1)) , 
+#'      a = c(rnorm(0.2*N),rnorm(0.8*N, mean = 2, sd = 1)) , 
 #'      b = rep(c(rnorm(N/4), rnorm(N/4, mean=3)),2)
 #'     )) %>% setNames(seq(80, by=-5, length.out=6))
 #' predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
@@ -319,9 +319,10 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
     expected <- .mldpEHR.disease_expected(index, patients_filtered %>% count(sex), empirical_disease_prob$prob)
     patients_filtered_class <- plyr::adply(expected, 1, function(a) {
         top_res <- a$disease_n
-        ret <- patients_filtered %>% inner_join(a %>% select(-n, -disease_n))
+        ret <- patients_filtered %>% inner_join(a %>% select(sex), by="sex")
         ret$target_class[1:top_res] <- 1
         return(ret)
     }) %>% select(-n, -disease_n)
-    return(patients_filtered_class %>% bind_rows(ordered_patients %>% anti_join(patients_filtered %>% select(id))))
+    return(patients_filtered_class %>% 
+        bind_rows(ordered_patients %>% anti_join(patients_filtered %>% select(id), by="id")))
 }
