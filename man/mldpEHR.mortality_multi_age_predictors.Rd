@@ -7,6 +7,7 @@
 mldpEHR.mortality_multi_age_predictors(
   patients,
   features,
+  step,
   nfolds,
   required_conditions = "id==id",
   q_thresh = 0.05,
@@ -70,15 +71,16 @@ build an xgboost cross validation classification model with k-fold cross-validat
 library(dplyr)
 library(ggplot2)
 # build base predictor
-outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age=rep(80, 1000), death = rep(c(NA, 82), each = 500), followup=rep(5, 1000))
+outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000), death = rep(c(NA, 82), each = 500), followup = rep(5, 1000))
 patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
-     id = 1:1000, 
-     sex = rep(0:1, 500),
-     age = 80 - .x * 5,
-     death = rep(c(NA, 82), each = 500),
-     followup = .x*5+5))) \%>\% setNames(seq(80, by=-5, length.out=5))
-features <- purrr::map(1:5, ~ data.frame(id = 1:1000, a = c(rnorm(500), rnorm(500, mean=2, sd=1)), b = c(rnorm(500), rnorm(500, mean=02, sd=1)))) \%>\%
-    setNames(seq(80, by=-5, length.out=5))
+    id = 1:1000,
+    sex = rep(0:1, 500),
+    age = 80 - .x * 5,
+    death = rep(c(NA, 82), each = 500),
+    followup = .x * 5 + 5
+))) \%>\% setNames(seq(80, by = -5, length.out = 5))
+features <- purrr::map(1:5, ~ data.frame(id = 1:1000, a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)), b = c(rnorm(500), rnorm(500, mean = 02, sd = 1)))) \%>\%
+    setNames(seq(80, by = -5, length.out = 5))
 predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 3, q_thresh = 0.5)
 test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\% mutate(n = .y))
 ggplot(test, aes(x = predict, colour = factor(target_class))) +

@@ -16,23 +16,25 @@
 #'
 #' library(dplyr)
 #' library(ggplot2)
-#' # build base predictor
-#' outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age=rep(80, 1000), death = rep(c(NA, 82), each = 500), followup=rep(5, 1000))
-#' patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
-#'      id = 1:1000, 
-#'      sex = rep(0:1, 500),
+#' N <- 10000
+#' patients <- purrr::map(0:5, ~ data.frame(
+#'      id = 1:N, 
+#'      sex = rep(c(1,2), N/2),
 #'      age = 80 - .x * 5,
-#'      death = rep(c(NA, 82), each = 500),
-#'      followup = .x*5+5))) %>% setNames(seq(80, by=-5, length.out=5))
-#' features <- purrr::map(1:5, ~ data.frame(id = 1:1000, a = c(rnorm(500), rnorm(500, mean=2, sd=1)), b = c(rnorm(500), rnorm(500, mean=02, sd=1)))) %>%
-#'     setNames(seq(80, by=-5, length.out=5))
-#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 3, q_thresh = 0.5)
-#' markov <- mldpEHR.mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.25))
+#'      death = c(rep(NA, 0.2*N), rep(82, 0.8*N)),
+#'      followup = .x*5+5)) %>% 
+#'     setNames(seq(80, by=-5, length.out=6))
+#' features <- purrr::map(0:5, ~ data.frame(id = 1:N, 
+#'      a = c(rnorm(0.2*N),rnorm(0.8*N, mean = 2, sd = 1)) , 
+#'      b = rep(c(rnorm(N/4), rnorm(N/4, mean=3)),2)
+#'     )) %>% setNames(seq(80, by=-5, length.out=6))
+#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
+#' markov <- mldpEHR.mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.1))
 #' prob <- purrr::map2_df(markov, names(markov), ~
 #'     as_tibble(.x$model[[1]], rownames = "sbin") %>%
 #'         mutate(sex = 0, model = .y) %>%
 #'         bind_rows(as_tibble(.x$model[[2]], rownames = "sbin") %>% mutate(sex = 1, model = .y))) %>%
-#'     mutate(sbin = factor(sbin, levels = c(1:4, "death")))
+#'     mutate(sbin = factor(sbin, levels = c(1:10, "death", "no_score")))
 #'
 #' ggplot(prob, aes(x = sbin, y = death, colour = factor(sex), group = factor(sex))) +
 #'     geom_point() +
@@ -43,7 +45,7 @@
 #' @export
 
 
-mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by = 0.05), required_conditions="id==id") {
+mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by = 0.05), required_conditions = "id==id") {
     markov_models <- list()
 
     # first model is the oldest model, used to compute the actual risk
@@ -72,31 +74,13 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
 #' - target - data frame containing the target bin for this age model (to be used as outcome for the younger age model)
 
 .mortality_markov_model_for_stitch_model <- function(markov, model, step, qbins, required_conditions, min_obs_for_estimate = 10) {
-    m <- model$test %>% # contains only patients with score (some were dropped)
-        mutate(sbin = as.numeric(cut(qpredict, qbins, right = FALSE, include.lowest = TRUE))) %>%
-        mutate(sbin = replace_na(sbin, "no_score")) %>%
-        mutate(sbin = factor(sbin, levels = c(1:(length(qbins) - 1), "no_score")))
-    pm <- m %>% 
-        left_join(markov$target %>% select(id, target_sbin), by = "id") %>% 
-        filter(!is.na(target_sbin) | step_outcome !="alive", eval(rlang::parse_expr(required_conditions))) %>% 
-        mutate(outcome=ifelse(is.na(target_sbin), step_outcome, as.character(target_sbin)))
+    m <- .mortality_set_sbin(model$test, qbins)
+    pm <- m %>%
+        left_join(markov$target %>% select(id, target_sbin), by = "id") %>%
+        filter(!is.na(target_sbin) | step_outcome != "alive", eval(rlang::parse_expr(required_conditions))) %>%
+        mutate(outcome = ifelse(is.na(target_sbin), step_outcome, as.character(target_sbin)))
 
-    km_model <- plyr::ddply(pm, plyr::.(sbin, sex), function(data) {
-        if (nrow(data) < min_obs_for_estimate) {
-            # bin is too small to compute probabilities, will use entire pop prob to fill in
-            data <- pm %>% filter(sex == data$sex[1])
-            warning("Insufficient stats for age:", data$age[1], " for sbin:", data$sbin[1], " for sex:", c("male", "female")[data$sex[1]], " ,using pop")
-        }
-        fit <- cmprsk::cuminc(data$obsT, data$outcome, cencode = "alive")
-        ret <- purrr::map2_df(fit, names(fit), ~ as.data.frame(.x[1:3]) %>% mutate(name = .y)) %>%
-            tidyr::separate(name, into = c("group", "outcome"), sep = " (?=[^ ]*$)") %>%
-            filter(time <= step) %>%
-            arrange(desc(time), desc(est)) %>% # this is the estimate at latest measured time before outcome years.
-            distinct(outcome, .keep_all = TRUE)
-        return(ret)
-    }) %>%
-        select(sbin, sex, est, outcome) %>%
-        arrange(sex, sbin, outcome)
+    km_model <- .mortality_km_sex_sbin(pm, step, min_obs_for_estimate)
 
     local_model <- km_model %>%
         mutate(outcome = factor(outcome, levels = rownames(markov$local_model[[1]]))) %>%
@@ -105,15 +89,7 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
         arrange(sex, sbin) %>%
         replace(is.na(.), 0)
 
-    local_model_by_sex <- plyr::dlply(local_model, plyr::.(sex), function(s) {
-        s %>%
-            select(-sex) %>%
-            bind_rows(data.frame(sbin = c("death"), death = c(1))) %>%
-            mutate(sbin = factor(sbin, levels = c(1:(length(qbins) - 1), "no_score", "death"))) %>%
-            replace(is.na(.), 0) %>%
-            arrange(sbin) %>%
-            column_to_rownames("sbin")
-    })
+    local_model_by_sex <- .mortality_local_model_by_sex(local_model, qbins)
 
     # adding missing possible outcomes
     local_model_by_sex <- purrr::map2(local_model_by_sex, markov$model, function(a, b) {
@@ -133,34 +109,13 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
 }
 
 .mortality_markov_model_for_outcome_model <- function(model, step, qbins, required_conditions, min_obs_for_estimate = 10) {
-    m <- model$test %>% # contains only patients with score (some were dropped)
-        mutate(sbin = as.numeric(cut(qpredict, qbins, right = FALSE, include.lowest = TRUE))) %>%
-        mutate(sbin = replace_na(sbin, "no_score")) %>%
-        mutate(sbin = factor(sbin, levels = c(1:(length(qbins) - 1), "no_score")))
-    pm <- m %>% filter(!is.na(step_outcome), eval(rlang::parse_expr(required_conditions))) %>% 
-        rename(outcome=step_outcome) 
+    m <- .mortality_set_sbin(model$test, qbins)
+    pm <- m %>%
+        filter(!is.na(step_outcome), eval(rlang::parse_expr(required_conditions))) %>%
+        rename(outcome = step_outcome)
 
     # compute competing risk models for each sex indeptendently according to source bin(sbin)
-    km_model <- plyr::ddply(pm, plyr::.(sbin, sex), function(data) {
-        #message(data$sbin[1], " :: " , data$sex[1])
-        if (nrow(data) < min_obs_for_estimate) {
-            # bin is too small to compute probabilities, will use entire pop prob to fill in
-            data <- pm %>% filter(sex == data$sex[1])
-            warning("Insufficient stats for age:", data$age[1], " for sbin:", data$sbin[1], " for sex:", c("male", "female")[data$sex[1]], " ,using pop")
-        }
-        if (nrow(data %>% filter(outcome == "death")) == 0) {
-            return(data.frame(time=step, est=0, var=0, group=1, outcome="death"))
-        }
-        fit <- cmprsk::cuminc(data$obsT, data$outcome, cencode = "alive")
-        ret <- purrr::map2_df(fit, names(fit), ~ as.data.frame(.x[1:3]) %>% mutate(name = .y)) %>%
-            tidyr::separate(name, into = c("group", "outcome"), sep = " (?=[^ ]*$)") %>%
-            filter(time <= step) %>%
-            arrange(desc(time), desc(est)) %>% # this is the estimate at latest measured time before outcome years.
-            distinct(outcome, .keep_all = TRUE)
-        return(ret)
-    }) %>%
-        select(sbin, sex, est, outcome) %>%
-        arrange(sex, sbin, outcome)
+    km_model <- .mortality_km_sex_sbin(pm, step, min_obs_for_estimate)
     # adding estimates for censored data (patient is alive)
     censored_estimate <- km_model %>%
         group_by(sbin, sex) %>%
@@ -172,6 +127,48 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
         pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
         arrange(sex, sbin)
 
+    local_model_by_sex <- .mortality_local_model_by_sex(local_model, qbins)
+    model_by_sex <- purrr::map(local_model_by_sex, ~ as.matrix(.x))
+
+    return(list(
+        model = model_by_sex,
+        local_model = local_model_by_sex,
+        qbins = qbins,
+        target = m %>% mutate(target_sbin = sbin)
+    ))
+}
+
+.mortality_set_sbin <- function(test_score, qbins) {
+    return(test_score %>% # contains only patients with score (some were dropped)
+        mutate(sbin = as.numeric(cut(qpredict, qbins, right = FALSE, include.lowest = TRUE))) %>%
+        mutate(sbin = ifelse(is.na(sbin), "no_score", sbin)) %>%
+        mutate(sbin = factor(sbin, levels = c(1:(length(qbins) - 1), "no_score"))))
+}
+
+.mortality_km_sex_sbin <- function(sbin_outcome_obsT, step, min_obs_for_estimate) {
+    km_model <- plyr::ddply(sbin_outcome_obsT, plyr::.(sbin, sex), function(data) {
+        if (nrow(data) < min_obs_for_estimate) {
+            # bin is too small to compute probabilities, will use entire pop prob to fill in
+            warning(glue::glue("Insufficient stats (n={nrow(data)}) for age: {as.character(data$age[1])}, sbin: {as.character(data$sbin[1])}, sex: {as.character(data$sex[1])}, using entire population"))
+            data <- sbin_outcome_obsT %>% filter(sex == data$sex[1])
+        }
+        if (nrow(data %>% filter(outcome != "alive")) == 0) {
+            return(data.frame(time = step, est = 0, var = 0, group = 1, outcome = "death"))
+        }
+        fit <- cmprsk::cuminc(data$obsT, data$outcome, cencode = "alive")
+        ret <- purrr::map2_df(fit, names(fit), ~ as.data.frame(.x[1:3]) %>% mutate(name = .y)) %>%
+            tidyr::separate(name, into = c("group", "outcome"), sep = " (?=[^ ]*$)") %>%
+            filter(time <= step) %>%
+            arrange(desc(time), desc(est)) %>% # this is the estimate at latest measured time before outcome years.
+            distinct(outcome, .keep_all = TRUE)
+        return(ret)
+    }) %>%
+        select(sbin, sex, est, outcome) %>%
+        arrange(sex, sbin, outcome)
+    return(km_model)
+}
+
+.mortality_local_model_by_sex <- function(local_model, qbins) {
     local_model_by_sex <- plyr::dlply(local_model, plyr::.(sex), function(s) {
         s %>%
             select(-sex) %>%
@@ -181,12 +178,5 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
             arrange(sbin) %>%
             column_to_rownames("sbin")
     })
-    model_by_sex <- purrr::map(local_model_by_sex, ~ as.matrix(.x))
-
-    return(list(
-        model = model_by_sex,
-        local_model = local_model_by_sex,
-        qbins = qbins,
-        target = m %>% mutate(target_sbin = sbin)
-    ))
+    return(local_model_by_sex)
 }

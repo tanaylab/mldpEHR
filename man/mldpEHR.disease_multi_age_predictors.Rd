@@ -71,21 +71,26 @@ build an xgboost cross validation classification model with k-fold cross-validat
 library(dplyr)
 library(ggplot2)
 # build base predictor
-outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age=rep(80, 1000), death = rep(c(NA, 82), each = 500), disease=rep(rep(c(NA, 81), each=250),2), followup=rep(5, 1000))
+outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000), death = rep(c(NA, 82), each = 500), disease = rep(rep(c(NA, 81), each = 250), 2), followup = rep(5, 1000))
 patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
-     id = 1:1000, 
-     sex = rep(0:1, 500),
-     age = 80 - .x * 5,
-     death = rep(c(NA, 82), each = 500),
-     disease=rep(rep(c(NA, 81), each=250),2),
-     followup = .x*5+5))) \%>\% setNames(seq(80, by=-5, length.out=5))
-features <- purrr::map(1:5, ~ data.frame(id = 1:1000, 
-     a = c(rnorm(500),rnorm(500, mean = 2, sd = 1)) , 
-     b = c(rnorm(500), rnorm(500, mean = -2, sd=1)),
-     c = rep(c(rnorm(250), rnorm(250, mean=3)),2)
-    )) \%>\% setNames(seq(80, by=-5, length.out=5))
+    id = 1:1000,
+    sex = rep(0:1, 500),
+    age = 80 - .x * 5,
+    death = rep(c(NA, 82), each = 500),
+    disease = rep(rep(c(NA, 81), each = 250), 2),
+    followup = .x * 5 + 5
+))) \%>\% setNames(seq(80, by = -5, length.out = 5))
+features <- purrr::map(1:5, ~ data.frame(
+    id = 1:1000,
+    a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)),
+    b = c(rnorm(500), rnorm(500, mean = -2, sd = 1)),
+    c = rep(c(rnorm(250), rnorm(250, mean = 3)), 2)
+)) \%>\% setNames(seq(80, by = -5, length.out = 5))
 predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
-test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\% mutate(n = .y) \%>\% arrange(id) \%>\% mutate(outcome=c(rep("healthy", 250), rep("disease", 250), rep("death", 250), rep("disae_and_death", 250))))
+test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\%
+    mutate(n = .y) \%>\%
+    arrange(id) \%>\%
+    mutate(outcome = c(rep("healthy", 250), rep("disease", 250), rep("death", 250), rep("disae_and_death", 250))))
 ggplot(test, aes(x = predict, colour = factor(outcome))) +
     facet_wrap(~n, nrow = 1) +
     geom_density() +
