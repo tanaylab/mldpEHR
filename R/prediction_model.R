@@ -69,8 +69,8 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
     pop <- purrr::map(1:length(patients), ~ .mldpEHR.compute_target_mortality(patients[[.x]], step, .x == 1)) %>% set_names(names(patients))
 
     predictors[[1]] <- .mldpEHR.cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
-
-    for (i in 2:length(pop)) {
+    i <- 2
+    while (i <= length(pop)) {
         # the predictor score will be used to set the target class for the next predictor (of younger age)
         target <- predictors[[i - 1]]$test %>%
             mutate(target_class = ifelse(qpredict < q_thresh, 0, 1)) %>%
@@ -103,6 +103,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
             xgboost_params = predictors[[i - 1]]$xgboost_params,
             nrounds = predictors[[i - 1]]$nrounds
         )
+        i <- i+1
     }
     names(predictors) <- names(patients)
     return(predictors)
@@ -190,7 +191,8 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
     empirical_disease_prob <- .mldpEHR.disease_empirical_prob_for_disease(pop, step, required_conditions)
     predictors[[1]] <- .mldpEHR.cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
 
-    for (i in 2:length(pop)) {
+    i <- 2
+    while (i <= length(pop)) {
         # the predictor score will be used to set the target class for the next predictor (of younger age)
         target <- predictors[[i - 1]]$test %>%
             filter(!is.na(qpredict)) %>%
@@ -211,7 +213,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
         predictor_target <- pop[[i]] %>%
             filter(is.na(target_class)) %>%
             select(-any_of(c("target_class", "fold"))) %>%
-            inner_join(target) %>%
+            inner_join(target, by="id") %>%
             arrange(desc(qpredict)) # %>%
         # select(-qpredict)
 
@@ -234,6 +236,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
             xgboost_params = predictors[[i - 1]]$xgboost_params,
             nrounds = predictors[[i - 1]]$nrounds
         )
+        i <- i+1
     }
     names(predictors) <- names(patients)
     return(predictors)

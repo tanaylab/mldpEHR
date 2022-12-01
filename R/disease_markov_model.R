@@ -46,8 +46,10 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
 
     # first model is the oldest model, used to compute the actual risk
     markov_models[[1]] <- .disease_markov_model_for_outcome_model(models[[1]], outcome, qbins, required_conditions)
-    for (i in 2:length(models)) {
+    i <- 2
+    while(i <= length(models)) {
         markov_models[[i]] <- .disease_markov_model_for_stitch_model(markov_models[[i - 1]], models[[i]], step, qbins, required_conditions)
+        i <- i+1
     }
     names(markov_models) <- names(models)
     return(markov_models)
