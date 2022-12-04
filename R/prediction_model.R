@@ -89,7 +89,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
         predictor_target <- pop[[i]] %>%
             filter(is.na(target_class)) %>%
             select(-any_of(c("target_class", "fold"))) %>%
-            left_join(target) # this will leave patients with target_class=NA
+            left_join(target, by="id") # this will leave patients with target_class=NA
 
         # combining the two:
         source_target <- step_target %>% bind_rows(predictor_target)
@@ -225,7 +225,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
         source_disease <- .mldpEHR.disease_assign_expected(i, source_target, empirical_disease_prob)
 
         # need to add the patients with missing target
-        source_disease <- source_disease %>% bind_rows(pop[[i]] %>% anti_join(source_disease %>% select(id)))
+        source_disease <- source_disease %>% bind_rows(pop[[i]] %>% anti_join(source_disease %>% select(id), by="id"))
 
         # training the predictor
         predictors[[i]] <- .mldpEHR.cv_train_outcome(
