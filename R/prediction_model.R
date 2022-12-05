@@ -32,7 +32,7 @@
 #' library(dplyr)
 #' library(ggplot2)
 #' # build base predictor
-#' N <- 10000
+#' N <- 1000
 #' patients <- purrr::map(0:5, ~ data.frame(
 #'     id = 1:N,
 #'     sex = rep(c(1, 2), N / 2),
@@ -158,7 +158,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
 #' library(dplyr)
 #' library(ggplot2)
 #' # build base predictor
-#' N <- 10000
+#' N <- 1000
 #' patients <- purrr::map(0:5, ~ data.frame(
 #'     id = 1:N,
 #'     sex = rep(1, N),
@@ -371,13 +371,13 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 #' - shap_by_patient - data frame containing for each patient and feature the feature value and mean shap value across all training folds
 #' - shap_by_fold - similar to shap_by_patient, but for each fold seperately
 #' @examples
-#' N <- 1000
+#' N <- 100
 #' patients <- list(data.frame(
 #'     id = 1:N,
 #'     sex = rep(c(1, 2), N / 2),
-#'     age = 80 - .x * 5,
+#'     age = 80,
 #'     death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
-#'     followup = .x * 5 + 5
+#'     followup = 5
 #' ))
 #' features <- list(data.frame(
 #'     id = 1:N,

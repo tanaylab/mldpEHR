@@ -22,7 +22,7 @@
 #' library(dplyr)
 #' library(ggplot2)
 #' # build base predictor
-#' N <- 10000
+#' N <- 1000
 #' patients <- purrr::map(0:5, ~ data.frame(
 #'     id = 1:N,
 #'     sex = rep(1, N),

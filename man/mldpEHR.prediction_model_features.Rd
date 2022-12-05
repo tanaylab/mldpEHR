@@ -23,13 +23,13 @@ a list with the 3 objects
 analyze feature significance for a k-fold cross validation model using shaply values
 }
 \examples{
-N <- 1000
+N <- 100
 patients <- list(data.frame(
     id = 1:N,
     sex = rep(c(1, 2), N / 2),
-    age = 80 - .x * 5,
+    age = 80,
     death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
-    followup = .x * 5 + 5
+    followup = 5
 ))
 features <- list(data.frame(
     id = 1:N,
