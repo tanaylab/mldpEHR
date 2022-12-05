@@ -81,7 +81,9 @@ markov <- mldpEHR.disease_markov(predictors, 5, 5, qbins = qbins)
 prob <- purrr::map2_df(markov, names(markov), ~
     as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
         mutate(model = .y)) \%>\%
-    mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
+    mutate(sbin = factor(sbin,
+        levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")
+    ))
 ggplot(prob, aes(x = sbin, y = disease + disease_death)) +
     geom_point() +
     facet_wrap(~model, nrow = 1) +

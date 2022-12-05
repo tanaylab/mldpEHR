@@ -90,7 +90,15 @@ predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
 test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\%
     mutate(n = .y) \%>\%
     arrange(id) \%>\%
-    mutate(outcome = c(rep("healthy", 250), rep("disease", 250), rep("death", 250), rep("disae_and_death", 250))))
+    mutate(
+        outcome =
+            c(
+                rep("healthy", 250),
+                rep("disease", 250),
+                rep("death", 250),
+                rep("disae_and_death", 250)
+            )
+    ))
 ggplot(test, aes(x = predict, colour = factor(outcome))) +
     facet_wrap(~n, nrow = 1) +
     geom_density() +

@@ -7,16 +7,16 @@
 .mldpEHR.disease_expected(index, population_count, edp)
 }
 \arguments{
+\item{index}{\itemize{
+\item index of entry in the empirical disase prob of the current age to start propogation from
+}}
+
 \item{population_count}{\itemize{
 \item data.frame containing age, sex, and the number of patients available
 }}
 
-\item{empirical_disease_prob}{\itemize{
-\item output of .mldpEHR.disease_empirical_prob_for_disease
-}}
-
-\item{step}{\itemize{
-\item time between populations
+\item{edp}{\itemize{
+\item empirical disease prob, output of .mldpEHR.disease_empirical_prob_for_disease
 }}
 }
 \description{

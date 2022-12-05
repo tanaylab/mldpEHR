@@ -23,13 +23,18 @@ a list with the 3 objects
 analyze feature significance for a k-fold cross validation model using shaply values
 }
 \examples{
-library(dplyr)
-library(ggplot2)
-target <- data.frame(id = 1:1000, sex = rep(c("male", "female"), 500), target_class = rep(c(0, 1), each = 500))
-features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) \%>\%
-    bind_rows(
-        data.frame(id = 501:1000, a = rnorm(500, mean = 0.5, sd = 2), b = rnorm(500, mean = -0.5, sd = 2))
-    )
-predictor <- mldpEHR.cv_train_outcome(target, features, folds = 3)
-predictor_features <- mldpEHR.prediction_model_features(predictor)
+patients <- list(data.frame(
+    id = 1:N,
+    sex = rep(c(1, 2), N / 2),
+    age = 80 - .x * 5,
+    death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
+    followup = .x * 5 + 5
+))
+features <- list(data.frame(
+    id = 1:N,
+    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
+    b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+))
+predictor <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
+predictor_features <- mldpEHR.prediction_model_features(predictor[[1]])
 }

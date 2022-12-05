@@ -6,5 +6,7 @@
 
 #' @import dplyr
 #' @import tidyr
+#' @importFrom stats ecdf
+#' @importFrom stats predict
 
 NULL
