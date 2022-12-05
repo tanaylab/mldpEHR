@@ -62,24 +62,28 @@ library(ggplot2)
 # build base predictor
 N <- 10000
 patients <- purrr::map(0:5, ~ data.frame(
-     id = 1:N, 
-     sex = rep(1, N),
-     age = 80 - .x * 5,
-     death = c(rep(NA, 0.2*N), rep(82, 0.8*N)),
-     disease=rep(rep(c(NA, 81), each=N/4),2),
-     followup = .x*5+5)) \%>\% 
-    setNames(seq(80, by=-5, length.out=6))
-features <- purrr::map(0:5, ~ data.frame(id = 1:N, 
-     a = c(rnorm(0.2*N),rnorm(0.8*N, mean = 2, sd = 1)) , 
-     b = rep(c(rnorm(N/4), rnorm(N/4, mean=3)),2)
-    )) \%>\% setNames(seq(80, by=-5, length.out=6))
+    id = 1:N,
+    sex = rep(1, N),
+    age = 80 - .x * 5,
+    death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
+    disease = rep(rep(c(NA, 81), each = N / 4), 2),
+    followup = .x * 5 + 5
+)) \%>\%
+    setNames(seq(80, by = -5, length.out = 6))
+features <- purrr::map(0:5, ~ data.frame(
+    id = 1:N,
+    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
+    b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+)) \%>\% setNames(seq(80, by = -5, length.out = 6))
 predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
 qbins <- seq(0, 1, by = 0.1)
 markov <- mldpEHR.disease_markov(predictors, 5, 5, qbins = qbins)
 prob <- purrr::map2_df(markov, names(markov), ~
-     as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
-     mutate(model = .y)) \%>\%
-     mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
-ggplot(prob, aes(x = sbin, y = disease+disease_death)) + 
-     geom_point() +  facet_wrap(~model, nrow = 1) + theme_bw()
+    as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
+        mutate(model = .y)) \%>\%
+    mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
+ggplot(prob, aes(x = sbin, y = disease + disease_death)) +
+    geom_point() +
+    facet_wrap(~model, nrow = 1) +
+    theme_bw()
 }

@@ -190,7 +190,7 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
             mutate(sbin = factor(sbin, levels = c(1:(length(qbins) - 1), "no_score", "death"))) %>%
             replace(is.na(.), 0) %>%
             arrange(sbin) %>%
-            column_to_rownames("sbin")
+            tibble::column_to_rownames("sbin")
     })
     return(local_model_by_sex)
 }

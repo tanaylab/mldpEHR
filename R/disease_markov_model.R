@@ -43,7 +43,9 @@
 #' prob <- purrr::map2_df(markov, names(markov), ~
 #'     as_tibble(.x$model[[1]], rownames = "sbin") %>%
 #'         mutate(model = .y)) %>%
-#'     mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
+#'     mutate(sbin = factor(sbin,
+#'         levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")
+#'     ))
 #' ggplot(prob, aes(x = sbin, y = disease + disease_death)) +
 #'     geom_point() +
 #'     facet_wrap(~model, nrow = 1) +
@@ -221,7 +223,7 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
             mutate(sbin = factor(sbin, levels = c(1:(length(qbins) - 1), "no_score", "disease", "disease_death", "death"))) %>%
             replace(is.na(.), 0) %>%
             arrange(sbin) %>%
-            column_to_rownames("sbin")
+            tibble::column_to_rownames("sbin")
     })
     return(local_model_by_sex)
 }
@@ -293,9 +295,9 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
 
 
 #' calculate expected number of disease patients
+#' @param index - index of entry in the empirical disase prob of the current age to start propogation from
 #' @param population_count - data.frame containing age, sex, and the number of patients available
-#' @param empirical_disease_prob - output of .mldpEHR.disease_empirical_prob_for_disease
-#' @param step - time between populations
+#' @param edp - empirical disease prob, output of .mldpEHR.disease_empirical_prob_for_disease
 .mldpEHR.disease_expected <- function(index, population_count, edp) {
     plyr::adply(population_count, 1, function(pc) {
         pc %>% mutate(disease_n = .mldpEHR.disease_expected_sex(
