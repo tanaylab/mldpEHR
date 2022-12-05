@@ -25,6 +25,7 @@ Imports:
     cmprsk,
     progress,
     stats,
+    tibble,
     ggplot2
 Suggests: 
     testthat (>= 3.0.0)

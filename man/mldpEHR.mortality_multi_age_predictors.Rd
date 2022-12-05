@@ -89,14 +89,21 @@ patients <- purrr::map(0:5, ~ data.frame(
     setNames(seq(80, by = -5, length.out = 6))
 features <- purrr::map(0:5, ~ data.frame(
     id = 1:N,
-    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
-    b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 0.5))
 )) \%>\% setNames(seq(80, by = -5, length.out = 6))
-predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
-test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\% mutate(n = .y))
-ggplot(test, aes(x = predict, colour = factor(target_class))) +
+predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
+test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\%
+    mutate(n = .y) \%>\%
+    arrange(id) \%>\%
+    mutate(
+        outcome =
+            c(
+                rep("alive", 0.2 * N),
+                rep("death", 0.8 * N)
+            )
+    ))
+ggplot(test, aes(x = predict, colour = factor(outcome))) +
     facet_wrap(~n, nrow = 1) +
-    geom_density() +
+    stat_ecdf() +
     theme_bw()
-
 }

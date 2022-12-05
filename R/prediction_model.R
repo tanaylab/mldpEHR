@@ -43,16 +43,24 @@
 #'     setNames(seq(80, by = -5, length.out = 6))
 #' features <- purrr::map(0:5, ~ data.frame(
 #'     id = 1:N,
-#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
-#'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 0.5))
 #' )) %>% setNames(seq(80, by = -5, length.out = 6))
-#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
-#' test <- purrr::map2_df(predictors, names(predictors), ~ .x$test %>% mutate(n = .y))
-#' ggplot(test, aes(x = predict, colour = factor(target_class))) +
+#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
+#' test <- purrr::map2_df(predictors, names(predictors), ~ .x$test %>%
+#'     mutate(n = .y) %>%
+#'     arrange(id) %>%
+#'     mutate(
+#'         outcome =
+#'             c(
+#'                 rep("alive", 0.2 * N),
+#'                 rep("death", 0.8 * N)
+#'             )
+#'     ))
+#' ggplot(test, aes(x = predict, colour = factor(outcome))) +
 #'     facet_wrap(~n, nrow = 1) +
-#'     geom_density() +
+#'     stat_ecdf() +
 #'     theme_bw()
-#'
+
 #' @export
 
 
@@ -155,32 +163,35 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
 #'     id = 1:N,
 #'     sex = rep(1, N),
 #'     age = 80 - .x * 5,
-#'     death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
+#'     death = c(rep(NA, 0.4 * N), rep(82, 0.6 * N)),
 #'     disease = rep(rep(c(NA, 81), each = N / 4), 2),
 #'     followup = .x * 5 + 5
 #' )) %>%
 #'     setNames(seq(80, by = -5, length.out = 6))
 #' features <- purrr::map(0:5, ~ data.frame(
 #'     id = 1:N,
-#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
+#'     a = c(rnorm(0.4 * N), rnorm(0.6 * N, mean = 2, sd = 1)),
 #'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
 #' )) %>% setNames(seq(80, by = -5, length.out = 6))
 #' predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
+#'
+#'
 #' test <- purrr::map2_df(predictors, names(predictors), ~ .x$test %>%
 #'     mutate(n = .y) %>%
 #'     arrange(id) %>%
 #'     mutate(
 #'         outcome =
 #'             c(
-#'                 rep("healthy", 250),
-#'                 rep("disease", 250),
-#'                 rep("death", 250),
-#'                 rep("disae_and_death", 250)
+#'                 rep("healthy", 0.25 * N),
+#'                 rep("disease", 0.15 * N),
+#'                 rep("disease_death", 0.1 * N),
+#'                 rep("death", 0.25 * N),
+#'                 rep("disease_death", 0.25 * N)
 #'             )
 #'     ))
 #' ggplot(test, aes(x = predict, colour = factor(outcome))) +
 #'     facet_wrap(~n, nrow = 1) +
-#'     geom_density() +
+#'     stat_ecdf() +
 #'     theme_bw()
 #'
 #' @export

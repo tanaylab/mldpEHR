@@ -33,10 +33,9 @@
 #'     setNames(seq(80, by = -5, length.out = 6))
 #' features <- purrr::map(0:5, ~ data.frame(
 #'     id = 1:N,
-#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
-#'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 0.5))
 #' )) %>% setNames(seq(80, by = -5, length.out = 6))
-#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
+#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
 #' markov <- mldpEHR.mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.1))
 #' prob <- purrr::map2_df(markov, names(markov), ~
 #'     as_tibble(.x$model[[1]], rownames = "sbin") %>%
