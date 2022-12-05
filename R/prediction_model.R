@@ -12,15 +12,15 @@
 #' @param features - list of data.frames of features. Muste contain patient id column.
 #' @param step - time between prediction models
 #' @param nfolds - number of folds used for k-fold cross validation
-#' @param required_conditions - any filter to apply to the patients to filter out training/testing 
+#' @param required_conditions - any filter to apply to the patients to filter out training/testing
 #' samples (e.g. missing data)
 #' @param q_thresh - score quantile threshold for target classification of 1
 #' @param xgboost_params - parameters used for xgboost model training
 #' @param nrounds - number of training rounds
-#' @return the full list of predictors, according to provided patients. Each predictor is a list 
+#' @return the full list of predictors, according to provided patients. Each predictor is a list
 #' with the following members:
 #' - model - list of xgboost models, for each fold
-#' - train - data.frame containing the patients id, fold, target class and predicted value in training 
+#' - train - data.frame containing the patients id, fold, target class and predicted value in training
 #' (each id was used in nfolds-1 for training)
 #' - test - data.frame containing the patients id, fold, target class and predicted value in testing
 # (each id was tested once in the fold it was not used for training)
@@ -32,8 +32,10 @@
 #' library(dplyr)
 #' library(ggplot2)
 #' # build base predictor
-#' outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000), 
-#'      death = rep(c(NA, 82), each = 500), followup = rep(5, 1000))
+#' outcome <- data.frame(
+#'     id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000),
+#'     death = rep(c(NA, 82), each = 500), followup = rep(5, 1000)
+#' )
 #' patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
 #'     id = 1:1000,
 #'     sex = rep(0:1, 500),
@@ -41,8 +43,10 @@
 #'     death = rep(c(NA, 82), each = 500),
 #'     followup = .x * 5 + 5
 #' ))) %>% setNames(seq(80, by = -5, length.out = 5))
-#' features <- purrr::map(1:5, ~ data.frame(id = 1:1000, 
-#' a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)), b = c(rnorm(500), rnorm(500, mean = 02, sd = 1)))) %>%
+#' features <- purrr::map(1:5, ~ data.frame(
+#'     id = 1:1000,
+#'     a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)), b = c(rnorm(500), rnorm(500, mean = 02, sd = 1))
+#' )) %>%
 #'     setNames(seq(80, by = -5, length.out = 5))
 #' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 3, q_thresh = 0.5)
 #' test <- purrr::map2_df(predictors, names(predictors), ~ .x$test %>% mutate(n = .y))
@@ -73,7 +77,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
                                                    ),
                                                    nrounds = 1000) {
     predictors <- list()
-    pop <- purrr::map(1:length(patients), ~ .mldpEHR.compute_target_mortality(patients[[.x]], step, .x == 1)) %>% 
+    pop <- purrr::map(1:length(patients), ~ .mldpEHR.compute_target_mortality(patients[[.x]], step, .x == 1)) %>%
         purrr::set_names(names(patients))
 
     predictors[[1]] <- .mldpEHR.cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
@@ -97,7 +101,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
         predictor_target <- pop[[i]] %>%
             filter(is.na(target_class)) %>%
             select(-any_of(c("target_class", "fold"))) %>%
-            left_join(target, by="id") # this will leave patients with target_class=NA
+            left_join(target, by = "id") # this will leave patients with target_class=NA
 
         # combining the two:
         source_target <- step_target %>% bind_rows(predictor_target)
@@ -111,7 +115,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
             xgboost_params = predictors[[i - 1]]$xgboost_params,
             nrounds = predictors[[i - 1]]$nrounds
         )
-        i <- i+1
+        i <- i + 1
     }
     names(predictors) <- names(patients)
     return(predictors)
@@ -195,7 +199,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
                                                  nrounds = 1000) {
     predictors <- list()
 
-    pop <- purrr::map(1:length(patients), ~ .mldpEHR.compute_target_disease(patients[[.x]], step, .x == 1)) %>% 
+    pop <- purrr::map(1:length(patients), ~ .mldpEHR.compute_target_disease(patients[[.x]], step, .x == 1)) %>%
         purrr::set_names(names(patients))
     empirical_disease_prob <- .mldpEHR.disease_empirical_prob_for_disease(pop, step, required_conditions)
     predictors[[1]] <- .mldpEHR.cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
@@ -222,7 +226,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
         predictor_target <- pop[[i]] %>%
             filter(is.na(target_class)) %>%
             select(-any_of(c("target_class", "fold"))) %>%
-            inner_join(target, by="id") %>%
+            inner_join(target, by = "id") %>%
             arrange(desc(qpredict)) # %>%
         # select(-qpredict)
 
@@ -234,7 +238,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
         source_disease <- .mldpEHR.disease_assign_expected(i, source_target, empirical_disease_prob)
 
         # need to add the patients with missing target
-        source_disease <- source_disease %>% bind_rows(pop[[i]] %>% anti_join(source_disease %>% select(id), by="id"))
+        source_disease <- source_disease %>% bind_rows(pop[[i]] %>% anti_join(source_disease %>% select(id), by = "id"))
 
         # training the predictor
         predictors[[i]] <- .mldpEHR.cv_train_outcome(
@@ -245,7 +249,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
             xgboost_params = predictors[[i - 1]]$xgboost_params,
             nrounds = predictors[[i - 1]]$nrounds
         )
-        i <- i+1
+        i <- i + 1
     }
     names(predictors) <- names(patients)
     return(predictors)
@@ -256,9 +260,9 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 
 
 #' train an xgboost cross validation classification model with k-fold cross-validation
-#' @param target - data.frame containing the patient id, sex, target_class (0/1) and fold 
+#' @param target - data.frame containing the patient id, sex, target_class (0/1) and fold
 #' (number used to assigne to cross validation folds)
-#' @param features - data.frame containing patient id along with all other features to be used in 
+#' @param features - data.frame containing patient id along with all other features to be used in
 #' classification model
 #' @param folds - number of cross-validation folds
 #' @param required_conditions - any filter to apply to the features to filter out training/testing samples (e.g. missing data)
@@ -266,9 +270,9 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 #' @param nrounds - number of training rounds
 #' @return a predictor, a list with the following elements
 #' - model - list of xgboost models, for each fold
-#' - train - data.frame containing the patients id, fold, target class and predicted value in training 
+#' - train - data.frame containing the patients id, fold, target class and predicted value in training
 #' (each id was used in nfolds-1 for training)
-#' - test - data.frame containing the patients id, fold, target class and predicted value in testing 
+#' - test - data.frame containing the patients id, fold, target class and predicted value in testing
 #' (each id was tested once in the fold it was not used for training)
 #' - xgboost_params - the set of parameters used in xgboost
 #' - nrounds - number of training iterations conducted
@@ -395,9 +399,11 @@ mldpEHR.prediction_model_features <- function(predictor) {
                     .colMeans(shap_fold[, .x], number_of_contributions_per_patient, nrow(shap_fold) / number_of_contributions_per_patient))
             )) %>% purrr::set_names(colnames(predictor$features %>% select(-id)))
         )
-    shap_id_val <- shap_id %>% pivot_longer(!id, names_to="feature", values_to="shap") %>% 
+    shap_id_val <- shap_id %>%
+        pivot_longer(!id, names_to = "feature", values_to = "shap") %>%
         left_join(
-            predictor$features %>% pivot_longer(!id, names_to="feature", values_to="value"), by=c("id", "feature")
+            predictor$features %>% pivot_longer(!id, names_to = "feature", values_to = "value"),
+            by = c("id", "feature")
         )
     shap_summary <- data.frame(
         feature = features,

@@ -1,6 +1,6 @@
 
 #' To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-#' Each bin is assigned a state, and we are computing the probability for traversing from each state to the 
+#' Each bin is assigned a state, and we are computing the probability for traversing from each state to the
 #' next model state.
 #' Patients with missing score are also included for this model to reflect actual population numbers
 #' @param models - list of prediction models (output of mldpEHR.cv_train_stitch_outcome)
@@ -10,12 +10,12 @@
 #' @param required_conditions - any filter to apply to the patients to filter out from model computation,
 #' for example limiting the time window
 #' @return a list of markov models (per age), each is a list with the following members:
-#' - model - matrix containing the probability for each quantile(score) bin to reach each of the 
+#' - model - matrix containing the probability for each quantile(score) bin to reach each of the
 #' target_classes provided in the oldest model.
-#' - local.model - data.frame containing the probability for each quantile(score) bin to reach each 
+#' - local.model - data.frame containing the probability for each quantile(score) bin to reach each
 #' of the quantile(score) bins of the next model by age.
 #' - qbins -  bins
-#' - target - data frame containing the target bin for this age model (to be used as outcome for the 
+#' - target - data frame containing the target bin for this age model (to be used as outcome for the
 #' younger age model)
 #' @examples
 #'
@@ -24,26 +24,30 @@
 #' # build base predictor
 #' N <- 10000
 #' patients <- purrr::map(0:5, ~ data.frame(
-#'      id = 1:N, 
-#'      sex = rep(1, N),
-#'      age = 80 - .x * 5,
-#'      death = c(rep(NA, 0.2*N), rep(82, 0.8*N)),
-#'      disease=rep(rep(c(NA, 81), each=N/4),2),
-#'      followup = .x*5+5)) %>% 
-#'     setNames(seq(80, by=-5, length.out=6))
-#' features <- purrr::map(0:5, ~ data.frame(id = 1:N, 
-#'      a = c(rnorm(0.2*N),rnorm(0.8*N, mean = 2, sd = 1)) , 
-#'      b = rep(c(rnorm(N/4), rnorm(N/4, mean=3)),2)
-#'     )) %>% setNames(seq(80, by=-5, length.out=6))
+#'     id = 1:N,
+#'     sex = rep(1, N),
+#'     age = 80 - .x * 5,
+#'     death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
+#'     disease = rep(rep(c(NA, 81), each = N / 4), 2),
+#'     followup = .x * 5 + 5
+#' )) %>%
+#'     setNames(seq(80, by = -5, length.out = 6))
+#' features <- purrr::map(0:5, ~ data.frame(
+#'     id = 1:N,
+#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
+#'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+#' )) %>% setNames(seq(80, by = -5, length.out = 6))
 #' predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
 #' qbins <- seq(0, 1, by = 0.1)
 #' markov <- mldpEHR.disease_markov(predictors, 5, 5, qbins = qbins)
 #' prob <- purrr::map2_df(markov, names(markov), ~
-#'      as_tibble(.x$model[[1]], rownames = "sbin") %>%
-#'      mutate(model = .y)) %>%
-#'      mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
-#' ggplot(prob, aes(x = sbin, y = disease+disease_death)) + 
-#'      geom_point() +  facet_wrap(~model, nrow = 1) + theme_bw()
+#'     as_tibble(.x$model[[1]], rownames = "sbin") %>%
+#'         mutate(model = .y)) %>%
+#'     mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
+#' ggplot(prob, aes(x = sbin, y = disease + disease_death)) +
+#'     geom_point() +
+#'     facet_wrap(~model, nrow = 1) +
+#'     theme_bw()
 #' @export
 
 
@@ -53,9 +57,9 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
     # first model is the oldest model, used to compute the actual risk
     markov_models[[1]] <- .disease_markov_model_for_outcome_model(models[[1]], outcome, qbins, required_conditions)
     i <- 2
-    while(i <= length(models)) {
+    while (i <= length(models)) {
         markov_models[[i]] <- .disease_markov_model_for_stitch_model(markov_models[[i - 1]], models[[i]], step, qbins, required_conditions)
-        i <- i+1
+        i <- i + 1
     }
     names(markov_models) <- names(models)
     return(markov_models)
@@ -69,7 +73,7 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
 #' @param qbins - quantile bin size of prediction score for which the markov model will define a state
 #' @param required_conditions - any filter to apply to the patients to filter out from model computation,
 #' for example limiting the time window
-#' @param min_obs_for_estimate - minimum of observations required to compute probability per sex/sbin. 
+#' @param min_obs_for_estimate - minimum of observations required to compute probability per sex/sbin.
 #' If minimum is not available, probability will be compuated using all data.
 #' @return a markov model, a list with the following members:
 #' - model - matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.
@@ -327,10 +331,10 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
     expected <- .mldpEHR.disease_expected(index, patients_filtered %>% count(sex), empirical_disease_prob$prob)
     patients_filtered_class <- plyr::adply(expected, 1, function(a) {
         top_res <- a$disease_n
-        ret <- patients_filtered %>% inner_join(a %>% select(sex), by="sex")
+        ret <- patients_filtered %>% inner_join(a %>% select(sex), by = "sex")
         ret$target_class[1:top_res] <- 1
         return(ret)
     }) %>% select(-n, -disease_n)
-    return(patients_filtered_class %>% 
-        bind_rows(ordered_patients %>% anti_join(patients_filtered %>% select(id), by="id")))
+    return(patients_filtered_class %>%
+        bind_rows(ordered_patients %>% anti_join(patients_filtered %>% select(id), by = "id")))
 }

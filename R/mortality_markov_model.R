@@ -1,6 +1,6 @@
 #' build a Markov probability model from multi-age prediction models
 #' To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-#' Each bin is assigned a state, and we are computing the probability for traversing from 
+#' Each bin is assigned a state, and we are computing the probability for traversing from
 #' each state to the next model state
 #' Patients with missing score are also included for this model to reflect actual population numbers
 #' @param models - list of prediction models (output of mldpEHR.cv_train_stitch_outcome)
@@ -10,12 +10,12 @@
 #' @param required_conditions - any filter to apply to the patients to filter out from model computation,
 #' for example limiting the time window
 #' @return a list of markov models (per age), each is a list with the following members:
-#' - model - matrix containing the probability for each quantile(score) bin to reach each of 
+#' - model - matrix containing the probability for each quantile(score) bin to reach each of
 #' the target_classes provided in the oldest model.
-#' - local.model - data.frame containing the probability for each quantile(score) bin to reach 
+#' - local.model - data.frame containing the probability for each quantile(score) bin to reach
 #' each of the quantile(score) bins of the next model by age.
 #' - qbins -  bins
-#' - target - data frame containing the target bin for this age model (to be used as outcome for 
+#' - target - data frame containing the target bin for this age model (to be used as outcome for
 #' the younger age model)
 
 #' @examples
@@ -24,16 +24,18 @@
 #' library(ggplot2)
 #' N <- 10000
 #' patients <- purrr::map(0:5, ~ data.frame(
-#'      id = 1:N, 
-#'      sex = rep(c(1,2), N/2),
-#'      age = 80 - .x * 5,
-#'      death = c(rep(NA, 0.2*N), rep(82, 0.8*N)),
-#'      followup = .x*5+5)) %>% 
-#'     setNames(seq(80, by=-5, length.out=6))
-#' features <- purrr::map(0:5, ~ data.frame(id = 1:N, 
-#'      a = c(rnorm(0.2*N),rnorm(0.8*N, mean = 2, sd = 1)) , 
-#'      b = rep(c(rnorm(N/4), rnorm(N/4, mean=3)),2)
-#'     )) %>% setNames(seq(80, by=-5, length.out=6))
+#'     id = 1:N,
+#'     sex = rep(c(1, 2), N / 2),
+#'     age = 80 - .x * 5,
+#'     death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
+#'     followup = .x * 5 + 5
+#' )) %>%
+#'     setNames(seq(80, by = -5, length.out = 6))
+#' features <- purrr::map(0:5, ~ data.frame(
+#'     id = 1:N,
+#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
+#'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+#' )) %>% setNames(seq(80, by = -5, length.out = 6))
 #' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
 #' markov <- mldpEHR.mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.1))
 #' prob <- purrr::map2_df(markov, names(markov), ~
@@ -57,9 +59,9 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
     # first model is the oldest model, used to compute the actual risk
     markov_models[[1]] <- .mortality_markov_model_for_outcome_model(models[[1]], outcome, qbins, required_conditions)
     i <- 2
-    while(i <= length(models)) {
+    while (i <= length(models)) {
         markov_models[[i]] <- .mortality_markov_model_for_stitch_model(markov_models[[i - 1]], models[[i]], step, qbins, required_conditions)
-        i <- i+1
+        i <- i + 1
     }
     names(markov_models) <- names(models)
     return(markov_models)
@@ -67,22 +69,22 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
 
 
 #' build an Markov probability model from multi-age prediction models
-#' @param markov - the markov model computed for the next age (older). the states in this age will be 
+#' @param markov - the markov model computed for the next age (older). the states in this age will be
 #' mapped to the states in this markov layer
 #' @param model - prediction model (output of build_cross_validation_time_stitch_classification_models)
 #' @param step - time between prediction models
 #' @param qbins - quantile bin size of prediction score for which the markov model will define a state
 #' @param required_conditions - any filter to apply to the patients to filter out from model computation,
 #' for example limiting the time window
-#' @param min_obs_for_estimate - minimum of observations required to compute probability per sex/sbin. 
+#' @param min_obs_for_estimate - minimum of observations required to compute probability per sex/sbin.
 #' If minimum is not available, probability will be compuated using all data.
 #' @return a markov model, a list with the following members:
-#' - model - matrix containing the probability for each quantile(score) bin to reach each of 
+#' - model - matrix containing the probability for each quantile(score) bin to reach each of
 #' the target_classes provided in the oldest model.
-#' - local.model - data.frame containing the probability for each quantile(score) bin to reach 
+#' - local.model - data.frame containing the probability for each quantile(score) bin to reach
 #' each of the quantile(score) bins of the next model by age.
 #' - qbins -  bins
-#' - target - data frame containing the target bin for this age model (to be used as outcome for 
+#' - target - data frame containing the target bin for this age model (to be used as outcome for
 #' the younger age model)
 
 .mortality_markov_model_for_stitch_model <- function(markov, model, step, qbins, required_conditions, min_obs_for_estimate = 10) {
