@@ -150,21 +150,21 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
 #' library(dplyr)
 #' library(ggplot2)
 #' # build base predictor
-#' outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000), death = rep(c(NA, 82), each = 500), disease = rep(rep(c(NA, 81), each = 250), 2), followup = rep(5, 1000))
-#' patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
-#'     id = 1:1000,
-#'     sex = rep(0:1, 500),
+#' N <- 10000
+#' patients <- purrr::map(0:5, ~ data.frame(
+#'     id = 1:N,
+#'     sex = rep(1, N),
 #'     age = 80 - .x * 5,
-#'     death = rep(c(NA, 82), each = 500),
-#'     disease = rep(rep(c(NA, 81), each = 250), 2),
+#'     death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
+#'     disease = rep(rep(c(NA, 81), each = N / 4), 2),
 #'     followup = .x * 5 + 5
-#' ))) %>% setNames(seq(80, by = -5, length.out = 5))
-#' features <- purrr::map(1:5, ~ data.frame(
-#'     id = 1:1000,
-#'     a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)),
-#'     b = c(rnorm(500), rnorm(500, mean = -2, sd = 1)),
-#'     c = rep(c(rnorm(250), rnorm(250, mean = 3)), 2)
-#' )) %>% setNames(seq(80, by = -5, length.out = 5))
+#' )) %>%
+#'     setNames(seq(80, by = -5, length.out = 6))
+#' features <- purrr::map(0:5, ~ data.frame(
+#'     id = 1:N,
+#'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
+#'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
+#' )) %>% setNames(seq(80, by = -5, length.out = 6))
 #' predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
 #' test <- purrr::map2_df(predictors, names(predictors), ~ .x$test %>%
 #'     mutate(n = .y) %>%
@@ -360,6 +360,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 #' - shap_by_patient - data frame containing for each patient and feature the feature value and mean shap value across all training folds
 #' - shap_by_fold - similar to shap_by_patient, but for each fold seperately
 #' @examples
+#' N <- 1000
 #' patients <- list(data.frame(
 #'     id = 1:N,
 #'     sex = rep(c(1, 2), N / 2),
