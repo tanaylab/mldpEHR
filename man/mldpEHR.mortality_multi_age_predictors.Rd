@@ -33,12 +33,17 @@ and any additional columns required for patient filtering in the future
 \item list of data.frames of features. Muste contain patient id column.
 }}
 
+\item{step}{\itemize{
+\item time between prediction models
+}}
+
 \item{nfolds}{\itemize{
 \item number of folds used for k-fold cross validation
 }}
 
 \item{required_conditions}{\itemize{
-\item any filter to apply to the patients to filter out training/testing samples (e.g. missing data)
+\item any filter to apply to the patients to filter out training/testing
+samples (e.g. missing data)
 }}
 
 \item{q_thresh}{\itemize{
@@ -54,11 +59,13 @@ and any additional columns required for patient filtering in the future
 }}
 }
 \value{
-the full list of predictors, according to provided patients. Each predictor is a list with the following members:
+the full list of predictors, according to provided patients. Each predictor is a list
+with the following members:
 \itemize{
 \item model - list of xgboost models, for each fold
-\item train - data.frame containing the patients id, fold, target class and predicted value in training (each id was used in nfolds-1 for training)
-\item test - data.frame containing the patients id, fold, target class and predicted value in testing (each id was tested once in the fold it was not used for training)
+\item train - data.frame containing the patients id, fold, target class and predicted value in training
+(each id was used in nfolds-1 for training)
+\item test - data.frame containing the patients id, fold, target class and predicted value in testing
 \item xgboost_params - the set of parameters used in xgboost
 \item nrounds - number of training iterations conducted
 }
@@ -71,7 +78,8 @@ build an xgboost cross validation classification model with k-fold cross-validat
 library(dplyr)
 library(ggplot2)
 # build base predictor
-outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000), death = rep(c(NA, 82), each = 500), followup = rep(5, 1000))
+outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000), 
+     death = rep(c(NA, 82), each = 500), followup = rep(5, 1000))
 patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
     id = 1:1000,
     sex = rep(0:1, 500),
@@ -79,7 +87,8 @@ patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
     death = rep(c(NA, 82), each = 500),
     followup = .x * 5 + 5
 ))) \%>\% setNames(seq(80, by = -5, length.out = 5))
-features <- purrr::map(1:5, ~ data.frame(id = 1:1000, a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)), b = c(rnorm(500), rnorm(500, mean = 02, sd = 1)))) \%>\%
+features <- purrr::map(1:5, ~ data.frame(id = 1:1000, 
+a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)), b = c(rnorm(500), rnorm(500, mean = 02, sd = 1)))) \%>\%
     setNames(seq(80, by = -5, length.out = 5))
 predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 3, q_thresh = 0.5)
 test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\% mutate(n = .y))

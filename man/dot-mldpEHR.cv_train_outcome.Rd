@@ -17,15 +17,21 @@
 }
 \arguments{
 \item{target}{\itemize{
-\item data.frame containing the patient id, sex, target_class (0/1) and fold (number used to assigne to cross validation folds)
+\item data.frame containing the patient id, sex, target_class (0/1) and fold
+(number used to assigne to cross validation folds)
 }}
 
 \item{features}{\itemize{
-\item data.frame containing patient id along with all other features to be used in classification model
+\item data.frame containing patient id along with all other features to be used in
+classification model
 }}
 
 \item{folds}{\itemize{
 \item number of cross-validation folds
+}}
+
+\item{required_conditions}{\itemize{
+\item any filter to apply to the features to filter out training/testing samples (e.g. missing data)
 }}
 
 \item{xgboost_params}{\itemize{
@@ -40,22 +46,14 @@
 a predictor, a list with the following elements
 \itemize{
 \item model - list of xgboost models, for each fold
-\item train - data.frame containing the patients id, fold, target class and predicted value in training (each id was used in nfolds-1 for training)
-\item test - data.frame containing the patients id, fold, target class and predicted value in testing (each id was tested once in the fold it was not used for training)
+\item train - data.frame containing the patients id, fold, target class and predicted value in training
+(each id was used in nfolds-1 for training)
+\item test - data.frame containing the patients id, fold, target class and predicted value in testing
+(each id was tested once in the fold it was not used for training)
 \item xgboost_params - the set of parameters used in xgboost
 \item nrounds - number of training iterations conducted
 }
 }
 \description{
 train an xgboost cross validation classification model with k-fold cross-validation
-}
-\examples{
-library(dplyr)
-library(ggplot2)
-target <- data.frame(id = 1:1000, sex = rep(c("male", "female"), 500), target_class = rep(c(0, 1), each = 500))
-features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) \%>\%
-    bind_rows(
-        data.frame(id = 501:1000, a = rnorm(500, mean = 0.5, sd = 2), b = rnorm(500, mean = -0.5, sd = 2))
-    )
-predictor <- .mldpEHR.cv_train_outcome(target, features, folds = 3)
 }

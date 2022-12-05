@@ -4,9 +4,16 @@
 \name{mldpEHR-package}
 \alias{mldpEHR}
 \alias{mldpEHR-package}
-\title{mldpEHR: Markovian Lifelong Mortality and Disease Predisposition models for electronic health records.}
+\title{mldpEHR: Markovian Lifelong Mortality and Disease Predisposition Models for Electronic Health Records}
 \description{
 A toolkit for building and testing lifelong prediction models for all cause mortality (longevity) and disease.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item Report bugs at \url{https://github.com/tanaylab/mldpEHR/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Netta Mendelson-Cohen \email{netta.mendelsoncohen@weizmann.ac.il}

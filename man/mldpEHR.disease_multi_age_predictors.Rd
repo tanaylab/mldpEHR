@@ -33,6 +33,10 @@ and any additional columns required for patient filtering in the future
 \item list of data.frames of features
 }}
 
+\item{step}{\itemize{
+\item time between prediction models
+}}
+
 \item{nfolds}{\itemize{
 \item number of folds used for k-fold cross validation
 }}
@@ -47,10 +51,6 @@ and any additional columns required for patient filtering in the future
 
 \item{nrounds}{\itemize{
 \item number of training rounds
-}}
-
-\item{q_thresh}{\itemize{
-\item score quantile threshold for target classification of 1
 }}
 }
 \value{

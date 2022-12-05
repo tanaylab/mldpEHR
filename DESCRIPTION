@@ -1,5 +1,5 @@
 Package: mldpEHR
-Title: Markovian Lifelong Mortality and Disease Predisposition models for electronic health records.
+Title: Markovian Lifelong Mortality and Disease Predisposition Models for Electronic Health Records
 Version: 0.0.0.9000
 Authors@R: c(
     person("Netta", "Mendelson-Cohen", , "netta.mendelsoncohen@weizmann.ac.il", role = c("aut", "cre")),
@@ -7,7 +7,8 @@ Authors@R: c(
     person("Weizmann Institute of Science", role = "cph")
   )
 Description: A toolkit for building and testing lifelong prediction models for all cause mortality (longevity) and disease.
-License: MIT + file LICENSE
+License: GPL-2
+BugReports: https://github.com/tanaylab/mldpEHR/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
@@ -17,6 +18,9 @@ Imports:
     dplyr,
     tidyr,
     plyr,
+    purrr,
+    rlang,
+    glue,
     xgboost,
     cmprsk,
     progress,

@@ -3,7 +3,8 @@
 \name{mldpEHR.disease_markov}
 \alias{mldpEHR.disease_markov}
 \title{To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state
+Each bin is assigned a state, and we are computing the probability for traversing from each state to the
+next model state.
 Patients with missing score are also included for this model to reflect actual population numbers}
 \usage{
 mldpEHR.disease_markov(
@@ -30,19 +31,28 @@ mldpEHR.disease_markov(
 \item{qbins}{\itemize{
 \item quantile bin size of prediction score for which the markov model will define a state
 }}
+
+\item{required_conditions}{\itemize{
+\item any filter to apply to the patients to filter out from model computation,
+for example limiting the time window
+}}
 }
 \value{
 a list of markov models (per age), each is a list with the following members:
 \itemize{
-\item model - matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.
-\item local.model - data.frame containing the probability for each quantile(score) bin to reach each of the quantile(score) bins of the next model by age.
+\item model - matrix containing the probability for each quantile(score) bin to reach each of the
+target_classes provided in the oldest model.
+\item local.model - data.frame containing the probability for each quantile(score) bin to reach each
+of the quantile(score) bins of the next model by age.
 \item qbins -  bins
-\item target - data frame containing the target bin for this age model (to be used as outcome for the younger age model)
+\item target - data frame containing the target bin for this age model (to be used as outcome for the
+younger age model)
 }
 }
 \description{
 To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state
+Each bin is assigned a state, and we are computing the probability for traversing from each state to the
+next model state.
 Patients with missing score are also included for this model to reflect actual population numbers
 }
 \examples{
@@ -51,29 +61,25 @@ library(dplyr)
 library(ggplot2)
 # build base predictor
 N <- 10000
-patients <- purrr::map(1:5, ~ data.frame(
-    id = 1:N,
-    sex = rep(1, N),
-    age = 80 - .x * 5,
-    death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
-    disease = rep(rep(c(NA, 81), each = N / 4), 2),
-    followup = .x * 5 + 5
-)) \%>\%
-    setNames(seq(80, by = -5, length.out = 5))
-features <- purrr::map(1:5, ~ data.frame(
-    id = 1:N,
-    a = c(rnorm(N / 2), rnorm(N / 2, mean = 2, sd = 1)),
-    b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
-)) \%>\% setNames(seq(80, by = -5, length.out = 5))
+patients <- purrr::map(0:5, ~ data.frame(
+     id = 1:N, 
+     sex = rep(1, N),
+     age = 80 - .x * 5,
+     death = c(rep(NA, 0.2*N), rep(82, 0.8*N)),
+     disease=rep(rep(c(NA, 81), each=N/4),2),
+     followup = .x*5+5)) \%>\% 
+    setNames(seq(80, by=-5, length.out=6))
+features <- purrr::map(0:5, ~ data.frame(id = 1:N, 
+     a = c(rnorm(0.2*N),rnorm(0.8*N, mean = 2, sd = 1)) , 
+     b = rep(c(rnorm(N/4), rnorm(N/4, mean=3)),2)
+    )) \%>\% setNames(seq(80, by=-5, length.out=6))
 predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
 qbins <- seq(0, 1, by = 0.1)
 markov <- mldpEHR.disease_markov(predictors, 5, 5, qbins = qbins)
 prob <- purrr::map2_df(markov, names(markov), ~
-    as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
-        mutate(model = .y)) \%>\%
-    mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
-ggplot(prob, aes(x = sbin, y = disease + disease_death)) +
-    geom_point() +
-    facet_wrap(~model, nrow = 1) +
-    theme_bw()
+     as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
+     mutate(model = .y)) \%>\%
+     mutate(sbin = factor(sbin, levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")))
+ggplot(prob, aes(x = sbin, y = disease+disease_death)) + 
+     geom_point() +  facet_wrap(~model, nrow = 1) + theme_bw()
 }

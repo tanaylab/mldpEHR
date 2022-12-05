@@ -10,19 +10,13 @@ mldpEHR.prediction_model_features(predictor)
 \item{predictor}{\itemize{
 \item classification model trained by mldpEHR.cv_train_outcome
 }}
-
-\item{nrounds}{\itemize{
-\item number of training rounds
-}}
 }
 \value{
-a data.frame containing all features and their statistics:
+a list with the 3 objects
 \itemize{
-\item model - list of xgboost models, for each fold
-\item train - data.frame containing the patients id, fold, target class and predicted value in training (each id was used in nfolds-1 for training)
-\item test - data.frame containing the patients id, fold, target class and predicted value in testing (each id was tested once in the fold it was not used for training)
-\item xgboost_params - the set of parameters used in xgboost
-\item nrounds - number of training iterations conducted
+\item summary - data frame containing for each feature the mean absolute shaply value for the feature across all training data
+\item shap_by_patient - data frame containing for each patient and feature the feature value and mean shap value across all training folds
+\item shap_by_fold - similar to shap_by_patient, but for each fold seperately
 }
 }
 \description{
@@ -37,4 +31,5 @@ features <- data.frame(id = 1:500, a = rnorm(500), b = rnorm(500)) \%>\%
         data.frame(id = 501:1000, a = rnorm(500, mean = 0.5, sd = 2), b = rnorm(500, mean = -0.5, sd = 2))
     )
 predictor <- mldpEHR.cv_train_outcome(target, features, folds = 3)
+predictor_features <- mldpEHR.prediction_model_features(predictor)
 }

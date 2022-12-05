@@ -30,11 +30,14 @@
 \item quantile bin size of prediction score for which the markov model will define a state
 }}
 
-\item{follow}{\itemize{
-\item data.frames  defining for each patient how much follow-up time they had. Dataframe must include the following columns:
-\item id
-\item time_in_system
-\item target_class - the classification if known within step (i.e. patient died). NA for unknown step outcome.
+\item{required_conditions}{\itemize{
+\item any filter to apply to the patients to filter out from model computation,
+for example limiting the time window
+}}
+
+\item{min_obs_for_estimate}{\itemize{
+\item minimum of observations required to compute probability per sex/sbin.
+If minimum is not available, probability will be compuated using all data.
 }}
 }
 \value{

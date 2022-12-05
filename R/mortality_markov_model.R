@@ -1,16 +1,22 @@
 #' build a Markov probability model from multi-age prediction models
 #' To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-#' Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state
+#' Each bin is assigned a state, and we are computing the probability for traversing from 
+#' each state to the next model state
 #' Patients with missing score are also included for this model to reflect actual population numbers
 #' @param models - list of prediction models (output of mldpEHR.cv_train_stitch_outcome)
 #' @param outcome - time from oldest model (first) to target outcome
 #' @param step - time between prediction models
 #' @param qbins - quantile bin size of prediction score for which the markov model will define a state
+#' @param required_conditions - any filter to apply to the patients to filter out from model computation,
+#' for example limiting the time window
 #' @return a list of markov models (per age), each is a list with the following members:
-#' - model - matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.
-#' - local.model - data.frame containing the probability for each quantile(score) bin to reach each of the quantile(score) bins of the next model by age.
+#' - model - matrix containing the probability for each quantile(score) bin to reach each of 
+#' the target_classes provided in the oldest model.
+#' - local.model - data.frame containing the probability for each quantile(score) bin to reach 
+#' each of the quantile(score) bins of the next model by age.
 #' - qbins -  bins
-#' - target - data frame containing the target bin for this age model (to be used as outcome for the younger age model)
+#' - target - data frame containing the target bin for this age model (to be used as outcome for 
+#' the younger age model)
 
 #' @examples
 #'
@@ -61,19 +67,23 @@ mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by
 
 
 #' build an Markov probability model from multi-age prediction models
-#' @param markov - the markov model computed for the next age (older). the states in this age will be mapped to the states in this markov layer
+#' @param markov - the markov model computed for the next age (older). the states in this age will be 
+#' mapped to the states in this markov layer
 #' @param model - prediction model (output of build_cross_validation_time_stitch_classification_models)
-#' @param follow -  data.frames  defining for each patient how much follow-up time they had. Dataframe must include the following columns:
-#' - id
-#' - time_in_system
-#' - target_class - the classification if known within step (i.e. patient died). NA for unknown step outcome.
 #' @param step - time between prediction models
 #' @param qbins - quantile bin size of prediction score for which the markov model will define a state
+#' @param required_conditions - any filter to apply to the patients to filter out from model computation,
+#' for example limiting the time window
+#' @param min_obs_for_estimate - minimum of observations required to compute probability per sex/sbin. 
+#' If minimum is not available, probability will be compuated using all data.
 #' @return a markov model, a list with the following members:
-#' - model - matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.
-#' - local.model - data.frame containing the probability for each quantile(score) bin to reach each of the quantile(score) bins of the next model by age.
+#' - model - matrix containing the probability for each quantile(score) bin to reach each of 
+#' the target_classes provided in the oldest model.
+#' - local.model - data.frame containing the probability for each quantile(score) bin to reach 
+#' each of the quantile(score) bins of the next model by age.
 #' - qbins -  bins
-#' - target - data frame containing the target bin for this age model (to be used as outcome for the younger age model)
+#' - target - data frame containing the target bin for this age model (to be used as outcome for 
+#' the younger age model)
 
 .mortality_markov_model_for_stitch_model <- function(markov, model, step, qbins, required_conditions, min_obs_for_estimate = 10) {
     m <- .mortality_set_sbin(model$test, qbins)

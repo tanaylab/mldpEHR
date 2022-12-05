@@ -15,7 +15,8 @@
 }
 \arguments{
 \item{markov}{\itemize{
-\item the markov model computed for the next age (older). the states in this age will be mapped to the states in this markov layer
+\item the markov model computed for the next age (older). the states in this age will be
+mapped to the states in this markov layer
 }}
 
 \item{model}{\itemize{
@@ -30,20 +31,26 @@
 \item quantile bin size of prediction score for which the markov model will define a state
 }}
 
-\item{follow}{\itemize{
-\item data.frames  defining for each patient how much follow-up time they had. Dataframe must include the following columns:
-\item id
-\item time_in_system
-\item target_class - the classification if known within step (i.e. patient died). NA for unknown step outcome.
+\item{required_conditions}{\itemize{
+\item any filter to apply to the patients to filter out from model computation,
+for example limiting the time window
+}}
+
+\item{min_obs_for_estimate}{\itemize{
+\item minimum of observations required to compute probability per sex/sbin.
+If minimum is not available, probability will be compuated using all data.
 }}
 }
 \value{
 a markov model, a list with the following members:
 \itemize{
-\item model - matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.
-\item local.model - data.frame containing the probability for each quantile(score) bin to reach each of the quantile(score) bins of the next model by age.
+\item model - matrix containing the probability for each quantile(score) bin to reach each of
+the target_classes provided in the oldest model.
+\item local.model - data.frame containing the probability for each quantile(score) bin to reach
+each of the quantile(score) bins of the next model by age.
 \item qbins -  bins
-\item target - data frame containing the target bin for this age model (to be used as outcome for the younger age model)
+\item target - data frame containing the target bin for this age model (to be used as outcome for
+the younger age model)
 }
 }
 \description{

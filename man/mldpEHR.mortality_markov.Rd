@@ -4,7 +4,8 @@
 \alias{mldpEHR.mortality_markov}
 \title{build a Markov probability model from multi-age prediction models
 To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state
+Each bin is assigned a state, and we are computing the probability for traversing from
+each state to the next model state
 Patients with missing score are also included for this model to reflect actual population numbers}
 \usage{
 mldpEHR.mortality_markov(
@@ -31,44 +32,54 @@ mldpEHR.mortality_markov(
 \item{qbins}{\itemize{
 \item quantile bin size of prediction score for which the markov model will define a state
 }}
+
+\item{required_conditions}{\itemize{
+\item any filter to apply to the patients to filter out from model computation,
+for example limiting the time window
+}}
 }
 \value{
 a list of markov models (per age), each is a list with the following members:
 \itemize{
-\item model - matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.
-\item local.model - data.frame containing the probability for each quantile(score) bin to reach each of the quantile(score) bins of the next model by age.
+\item model - matrix containing the probability for each quantile(score) bin to reach each of
+the target_classes provided in the oldest model.
+\item local.model - data.frame containing the probability for each quantile(score) bin to reach
+each of the quantile(score) bins of the next model by age.
 \item qbins -  bins
-\item target - data frame containing the target bin for this age model (to be used as outcome for the younger age model)
+\item target - data frame containing the target bin for this age model (to be used as outcome for
+the younger age model)
 }
 }
 \description{
 build a Markov probability model from multi-age prediction models
 To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-Each bin is assigned a state, and we are computing the probability for traversing from each state to the next model state
+Each bin is assigned a state, and we are computing the probability for traversing from
+each state to the next model state
 Patients with missing score are also included for this model to reflect actual population numbers
 }
 \examples{
 
 library(dplyr)
 library(ggplot2)
-# build base predictor
-outcome <- data.frame(id = 1:1000, sex = rep(0:1, 500), age = rep(80, 1000), death = rep(c(NA, 82), each = 500), followup = rep(5, 1000))
-patients <- c(list(outcome), purrr::map(1:4, ~ data.frame(
-    id = 1:1000,
-    sex = rep(0:1, 500),
-    age = 80 - .x * 5,
-    death = rep(c(NA, 82), each = 500),
-    followup = .x * 5 + 5
-))) \%>\% setNames(seq(80, by = -5, length.out = 5))
-features <- purrr::map(1:5, ~ data.frame(id = 1:1000, a = c(rnorm(500), rnorm(500, mean = 2, sd = 1)), b = c(rnorm(500), rnorm(500, mean = 02, sd = 1)))) \%>\%
-    setNames(seq(80, by = -5, length.out = 5))
-predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 3, q_thresh = 0.5)
-markov <- mldpEHR.mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.25))
+N <- 10000
+patients <- purrr::map(0:5, ~ data.frame(
+     id = 1:N, 
+     sex = rep(c(1,2), N/2),
+     age = 80 - .x * 5,
+     death = c(rep(NA, 0.2*N), rep(82, 0.8*N)),
+     followup = .x*5+5)) \%>\% 
+    setNames(seq(80, by=-5, length.out=6))
+features <- purrr::map(0:5, ~ data.frame(id = 1:N, 
+     a = c(rnorm(0.2*N),rnorm(0.8*N, mean = 2, sd = 1)) , 
+     b = rep(c(rnorm(N/4), rnorm(N/4, mean=3)),2)
+    )) \%>\% setNames(seq(80, by=-5, length.out=6))
+predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
+markov <- mldpEHR.mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.1))
 prob <- purrr::map2_df(markov, names(markov), ~
     as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
         mutate(sex = 0, model = .y) \%>\%
         bind_rows(as_tibble(.x$model[[2]], rownames = "sbin") \%>\% mutate(sex = 1, model = .y))) \%>\%
-    mutate(sbin = factor(sbin, levels = c(1:4, "death")))
+    mutate(sbin = factor(sbin, levels = c(1:10, "death", "no_score")))
 
 ggplot(prob, aes(x = sbin, y = death, colour = factor(sex), group = factor(sex))) +
     geom_point() +
