@@ -392,11 +392,15 @@ mldpEHR.prediction_model_features <- function(predictor) {
                     .colMeans(shap_fold[, .x], number_of_contributions_per_patient, nrow(shap_fold) / number_of_contributions_per_patient))
             )) %>% set_names(colnames(predictor$features %>% select(-id)))
         )
+    shap_id_val <- shap_id %>% pivot_longer(!id, names_to="feature", values_to="shap") %>% 
+        left_join(
+            predictor$features %>% pivot_longer(!id, names_to="feature", values_to="value"), by=c("id", "feature")
+        )
     shap_summary <- data.frame(
         feature = features,
         mean_abs_shap = colMeans(abs(shap_id %>% select(one_of(features))))
     )
-    return(list(summary = shap_summary, shap_by_patient = shap_id, shap_by_fold = shap_fold))
+    return(list(summary = shap_summary, shap_by_patient = shap_id_val, shap_by_fold = shap_fold))
 }
 
 
