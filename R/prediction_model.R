@@ -1,6 +1,7 @@
 # this file contains methods for building and analyzing prediction model
 
-#' build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model
+#' Build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model
+#'
 #' @param patients - list of data.frames of all the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth.
 #' Each patient data.frame contains the following columns:
 #' - patient id
@@ -26,7 +27,6 @@
 # (each id was tested once in the fold it was not used for training)
 #' - xgboost_params - the set of parameters used in xgboost
 #' - nrounds - number of training iterations conducted
-
 #' @examples
 #'
 #' library(dplyr)
@@ -60,10 +60,7 @@
 #'     facet_wrap(~n, nrow = 1) +
 #'     stat_ecdf() +
 #'     theme_bw()
-
 #' @export
-
-
 mldpEHR.mortality_multi_age_predictors <- function(patients,
                                                    features,
                                                    step,
@@ -195,8 +192,6 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
 #'     theme_bw()
 #'
 #' @export
-
-
 mldpEHR.disease_multi_age_predictors <- function(patients,
                                                  features,
                                                  step,
@@ -387,7 +382,6 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 #' predictor <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
 #' predictor_features <- mldpEHR.prediction_model_features(predictor[[1]])
 #' @export
-
 mldpEHR.prediction_model_features <- function(predictor) {
     if (!"model" %in% names(predictor) | !"features" %in% names(predictor)) {
         stop("predictor must contain model and features information")

@@ -26,7 +26,9 @@ Imports:
     progress,
     stats,
     tibble,
-    ggplot2
+    ggplot2,
+    cli,
+    withr
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

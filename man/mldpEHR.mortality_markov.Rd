@@ -2,11 +2,7 @@
 % Please edit documentation in R/mortality_markov_model.R
 \name{mldpEHR.mortality_markov}
 \alias{mldpEHR.mortality_markov}
-\title{build a Markov probability model from multi-age prediction models
-To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-Each bin is assigned a state, and we are computing the probability for traversing from
-each state to the next model state
-Patients with missing score are also included for this model to reflect actual population numbers}
+\title{Build a Markov probability model from multi-age prediction models}
 \usage{
 mldpEHR.mortality_markov(
   models,
@@ -18,7 +14,7 @@ mldpEHR.mortality_markov(
 }
 \arguments{
 \item{models}{\itemize{
-\item list of prediction models (output of mldpEHR.cv_train_stitch_outcome)
+\item list of prediction models (output of \code{mldpEHR.cv_train_stitch_outcome})
 }}
 
 \item{outcome}{\itemize{
@@ -51,11 +47,10 @@ the younger age model)
 }
 }
 \description{
-build a Markov probability model from multi-age prediction models
-To implement this, all patients at a given age will be binned according to their model score (using quantiles).
+All patients at a given age will be binned according to their model score (using quantiles).
 Each bin is assigned a state, and we are computing the probability for traversing from
 each state to the next model state
-Patients with missing score are also included for this model to reflect actual population numbers
+Patients with missing score are also included for this model to reflect actual population numbers.
 }
 \examples{
 

@@ -11,6 +11,7 @@ A toolkit for building and testing lifelong prediction models for all cause mort
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://tanaylab.github.io/mldpEHR/}
   \item Report bugs at \url{https://github.com/tanaylab/mldpEHR/issues}
 }
 

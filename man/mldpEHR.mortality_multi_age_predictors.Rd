@@ -2,7 +2,7 @@
 % Please edit documentation in R/prediction_model.R
 \name{mldpEHR.mortality_multi_age_predictors}
 \alias{mldpEHR.mortality_multi_age_predictors}
-\title{build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model}
+\title{Build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model}
 \usage{
 mldpEHR.mortality_multi_age_predictors(
   patients,
@@ -71,7 +71,7 @@ with the following members:
 }
 }
 \description{
-build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model
+Build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model
 }
 \examples{
 
