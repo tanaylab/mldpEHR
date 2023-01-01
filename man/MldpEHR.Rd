@@ -10,13 +10,15 @@ MldpEHR(patients, features, age_groups = NULL)
 \item{patients}{list of data.frames of all the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each patient data.frame contains the following columns:
 \itemize{
 \item{id: }{unique patient id}
-\item{age: }{age of patient}
+\item{age: }{age of patient. All patients in the data.frame must be the same age}
 \item{sex: }{1 for male, 2 for female}
 \item{death: }{age at death, NA if patient doesn't die by end of followup}
 \item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
 }\cr
 
-The data frame can contain any additional columns required for patient filtering in the future.}
+The data frame can contain any additional columns required for patient filtering in the future.\cr
+
+Note that every age group except the last one must have at least two patients per sex which exist in the next age group. This is to ensure that the model can be trained.}
 
 \item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.}
 
@@ -33,14 +35,14 @@ Create MldpEHR object
 patients <- list(
     tibble::tibble(
         id = 1:10,
-        age = sample(80:85, 10, replace = TRUE),
+        age = 80,
         sex = sample(1:2, 10, replace = TRUE),
         followup = sample(0:5, 10, replace = TRUE),
         death = pmin(age + followup, sample(c(NA, 80:85), 10, replace = TRUE))
     ),
     tibble::tibble(
-        id = 11:20,
-        age = sample(75:80, 10, replace = TRUE),
+        id = 1:10,
+        age = 75,
         sex = sample(1:2, 10, replace = TRUE),
         followup = sample(0:5, 10, replace = TRUE),
         death = pmin(age + followup, sample(c(NA, 75:80), 10, replace = TRUE))
@@ -57,7 +59,7 @@ features <- list(
         feature3 = sample(1:3, 10, replace = TRUE)
     ),
     tibble::tibble(
-        id = 11:20,
+        id = 1:10,
         feature1 = rnorm(10),
         feature2 = rnorm(10),
         feature4 = sample(0:1, 10, replace = TRUE)

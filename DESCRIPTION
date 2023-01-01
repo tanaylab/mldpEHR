@@ -30,6 +30,7 @@ Imports:
     cli,
     withr
 Suggests: 
+    rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 URL: https://tanaylab.github.io/mldpEHR/

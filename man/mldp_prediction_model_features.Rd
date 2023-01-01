@@ -2,40 +2,36 @@
 % Please edit documentation in R/prediction_model.R
 \name{mldp_prediction_model_features}
 \alias{mldp_prediction_model_features}
-\title{analyze feature significance for a k-fold cross validation model using shaply values}
+\title{Extract statistics on the features used in a k-fold cross-validation model using SHAP (SHapley Additive exPlanations)}
 \usage{
 mldp_prediction_model_features(predictor)
 }
 \arguments{
-\item{predictor}{\itemize{
-\item classification model trained by mldp_cv_train_outcome
-}}
+\item{predictor}{a single predictor, a single element of the list returned by \code{mldp_disease_multi_age_predictors} or \code{mldp_mortality_multi_age_predictors}}
 }
 \value{
-a list with the 3 objects
+a list with 3 elements:
 \itemize{
-\item summary - data frame containing for each feature the mean absolute shaply value for the feature across all training data
-\item shap_by_patient - data frame containing for each patient and feature the feature value and mean shap value across all training folds
-\item shap_by_fold - similar to shap_by_patient, but for each fold seperately
+\item{summary: }{a data frame containing for each feature the mean absolute shaply value for the feature across all training data.}
+\item{shap_by_patient: }{a data frame data frame containing for each patient and feature the feature value and mean shap value across all training folds.}
+\item{shap_by_fold: }{similar to shap_by_patient, but for each fold seperately.}
 }
 }
 \description{
-analyze feature significance for a k-fold cross validation model using shaply values
+Extract statistics on the features used in a k-fold cross-validation model using SHAP (SHapley Additive exPlanations)
 }
 \examples{
-N <- 100
-patients <- list(data.frame(
-    id = 1:N,
-    sex = rep(c(1, 2), N / 2),
-    age = 80,
-    death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
-    followup = 5
-))
-features <- list(data.frame(
-    id = 1:N,
-    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
-    b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
-))
-predictor <- mldp_mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
-predictor_features <- mldp_prediction_model_features(predictor[[1]])
+# Load the example data
+mortality <- load_mortality_example_data(100)
+
+#' Build predictors
+predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 3, q_thresh = 0.05)
+
+predictor_features <- mldp_prediction_model_features(predictors[[1]])
+
+names(predictor_features)
+head(predictor_features$summary)
+head(predictor_features$shap_by_patient)
+head(predictor_features$shap_by_fold)
+
 }

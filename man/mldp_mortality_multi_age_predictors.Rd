@@ -2,12 +2,12 @@
 % Please edit documentation in R/prediction_model.R
 \name{mldp_mortality_multi_age_predictors}
 \alias{mldp_mortality_multi_age_predictors}
-\title{Build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model}
+\title{Build a set of mldpEHR prediction models for mortality}
 \usage{
 mldp_mortality_multi_age_predictors(
   patients,
   features,
-  step,
+  survival_years,
   nfolds,
   required_conditions = "id==id",
   q_thresh = 0.05,
@@ -18,92 +18,58 @@ mldp_mortality_multi_age_predictors(
 )
 }
 \arguments{
-\item{patients}{\itemize{
-\item list of data.frames of all the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth.
-Each patient data.frame contains the following columns:
-\item patient id
-\item sex
-\item age
-\item death - age at death, NA if unknown
-\item followup - available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)
-and any additional columns required for patient filtering in the future
-}}
+\item{patients}{list of data.frames of all the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each patient data.frame contains the following columns:
+\itemize{
+\item{id: }{unique patient id}
+\item{age: }{age of patient. All patients in the data.frame must be the same age}
+\item{sex: }{1 for male, 2 for female}
+\item{death: }{age at death, NA if patient doesn't die by end of followup}
+\item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
+}\cr
 
-\item{features}{\itemize{
-\item list of data.frames of features. Muste contain patient id column.
-}}
+The data frame can contain any additional columns required for patient filtering in the future.\cr
 
-\item{step}{\itemize{
-\item time between prediction models
-}}
+Note that every age group except the last one must have at least two patients per sex which exist in the next age group. This is to ensure that the model can be trained.}
 
-\item{nfolds}{\itemize{
-\item number of folds used for k-fold cross validation
-}}
+\item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.}
 
-\item{required_conditions}{\itemize{
-\item any filter to apply to the patients to filter out training/testing
-samples (e.g. missing data)
-}}
+\item{survival_years}{the number of years to predict mortality for (after the oldest age). e.g. 5 for predicting mortality up to age 85}
 
-\item{q_thresh}{\itemize{
-\item score quantile threshold for target classification of 1
-}}
+\item{nfolds}{number of folds used for k-fold cross validation}
 
-\item{xgboost_params}{\itemize{
-\item parameters used for xgboost model training
-}}
+\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link{dplyr::filter}} for more details.}
 
-\item{nrounds}{\itemize{
-\item number of training rounds
-}}
+\item{q_thresh}{quantile of the predicted score to use for the next age group. Default is 0.05, which means the top 5\% of the predicted score will be used for the next age group.}
+
+\item{xgboost_params}{parameters used for xgboost model training}
+
+\item{nrounds}{number of training rounds}
 }
 \value{
-the full list of predictors, according to provided patients. Each predictor is a list
+a list of predictors, for each age. Each predictor is a list
 with the following members:
 \itemize{
-\item model - list of xgboost models, for each fold
-\item train - data.frame containing the patients id, fold, target class and predicted value in training
+\item{model: }{a list of xgboost models, for each fold}
+\item{train: }{data.frame containing the patients id, fold, target class and predicted value in training}
 (each id was used in nfolds-1 for training)
-\item test - data.frame containing the patients id, fold, target class and predicted value in testing
-\item xgboost_params - the set of parameters used in xgboost
-\item nrounds - number of training iterations conducted
+\item{test: }{data.frame containing the patients id, fold, target class and predicted value in testing
+(each id was tested once in the fold it was not used for training)}
+\item{xgboost_params: }{the set of parameters used in xgboost}
+\item{nrounds: }{number of training iterations conducted}
 }
 }
 \description{
-Build an xgboost cross validation classification model with k-fold cross-validation for each featureset provided, assumed that the classification is defined by the previous model
+Given a set of patients and features, builds a set of models for predicting mortality up to \code{survival_years} after the oldest age (e.g. 85) by stitching together models for each age group. Each model is build using a cross validation \code{xgboost} k-fold classification model, where the number of folds is determined by the \code{nfolds} parameter. Stitching is done by first modeling the oldest group, and then taking the top \code{q_thresh} quantile of the predicted score for each patient in the next younger group and building a model to classify them. See more in the vignette.
 }
 \examples{
 
-library(dplyr)
-library(ggplot2)
-# build base predictor
-N <- 1000
-patients <- purrr::map(0:5, ~ data.frame(
-    id = 1:N,
-    sex = rep(c(1, 2), N / 2),
-    age = 80 - .x * 5,
-    death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
-    followup = .x * 5 + 5
-)) \%>\%
-    setNames(seq(80, by = -5, length.out = 6))
-features <- purrr::map(0:5, ~ data.frame(
-    id = 1:N,
-    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 0.5))
-)) \%>\% setNames(seq(80, by = -5, length.out = 6))
-predictors <- mldp_mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
-test <- purrr::map2_df(predictors, names(predictors), ~ .x$test \%>\%
-    mutate(n = .y) \%>\%
-    arrange(id) \%>\%
-    mutate(
-        outcome =
-            c(
-                rep("alive", 0.2 * N),
-                rep("death", 0.8 * N)
-            )
-    ))
-ggplot(test, aes(x = predict, colour = factor(outcome))) +
-    facet_wrap(~n, nrow = 1) +
-    stat_ecdf() +
-    theme_bw()
+# Load the example data
+mortality <- load_mortality_example_data()
+
+#' Build predictors
+predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 3, q_thresh = 0.2)
+
+# Plot the ecdf of the score of each model for colored by outcome
+mldp_plot_multi_age_predictors_ecdf(predictors)
+
 }
