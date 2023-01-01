@@ -20,7 +20,7 @@ The data frame can contain any additional columns required for patient filtering
 
 \item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.}
 
-\item{age_groups}{(optional) labels for the age groups}
+\item{age_groups}{(optional) labels for the age groups. If the \code{patients} list is named, the age_groups will be the names of the lists.}
 }
 \value{
 a MldpEHR object
@@ -47,6 +47,8 @@ patients <- list(
     )
 )
 
+names(patients) <- c("80", "75")
+
 features <- list(
     tibble::tibble(
         id = 1:10,
@@ -60,7 +62,7 @@ features <- list(
         feature2 = rnorm(10),
         feature4 = sample(0:1, 10, replace = TRUE)
     )
-) #'
+)
 
 mldp <- MldpEHR(patients = patients, features = features)
 

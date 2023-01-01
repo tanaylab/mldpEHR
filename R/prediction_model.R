@@ -45,7 +45,7 @@
 #'     id = 1:N,
 #'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 0.5))
 #' )) %>% setNames(seq(80, by = -5, length.out = 6))
-#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
+#' predictors <- mldp_mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
 #' test <- purrr::map2_df(predictors, names(predictors), ~ .x$test %>%
 #'     mutate(n = .y) %>%
 #'     arrange(id) %>%
@@ -61,29 +61,29 @@
 #'     stat_ecdf() +
 #'     theme_bw()
 #' @export
-mldpEHR.mortality_multi_age_predictors <- function(patients,
-                                                   features,
-                                                   step,
-                                                   nfolds,
-                                                   required_conditions = "id==id",
-                                                   q_thresh = 0.05,
-                                                   xgboost_params = list(
-                                                       booster = "gbtree",
-                                                       objective = "binary:logistic",
-                                                       subsample = 0.7,
-                                                       max_depth = 3,
-                                                       colsample_bytree = 1,
-                                                       eta = 0.05,
-                                                       min_child_weight = 1,
-                                                       gamma = 0,
-                                                       eval_metric = "auc"
-                                                   ),
-                                                   nrounds = 1000) {
+mldp_mortality_multi_age_predictors <- function(patients,
+                                                features,
+                                                step,
+                                                nfolds,
+                                                required_conditions = "id==id",
+                                                q_thresh = 0.05,
+                                                xgboost_params = list(
+                                                    booster = "gbtree",
+                                                    objective = "binary:logistic",
+                                                    subsample = 0.7,
+                                                    max_depth = 3,
+                                                    colsample_bytree = 1,
+                                                    eta = 0.05,
+                                                    min_child_weight = 1,
+                                                    gamma = 0,
+                                                    eval_metric = "auc"
+                                                ),
+                                                nrounds = 1000) {
     predictors <- list()
-    pop <- purrr::map(1:length(patients), ~ .mldpEHR.compute_target_mortality(patients[[.x]], step, .x == 1)) %>%
+    pop <- purrr::map(1:length(patients), ~ .mldp_compute_target_mortality(patients[[.x]], step, .x == 1)) %>%
         purrr::set_names(names(patients))
 
-    predictors[[1]] <- .mldpEHR.cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
+    predictors[[1]] <- .mldp_cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
     i <- 2
     while (i <= length(pop)) {
         # the predictor score will be used to set the target class for the next predictor (of younger age)
@@ -110,7 +110,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
         source_target <- step_target %>% bind_rows(predictor_target)
 
         # training the predictor
-        predictors[[i]] <- .mldpEHR.cv_train_outcome(
+        predictors[[i]] <- .mldp_cv_train_outcome(
             source_target,
             features[[i]],
             nfolds,
@@ -170,7 +170,7 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
 #'     a = c(rnorm(0.4 * N), rnorm(0.6 * N, mean = 2, sd = 1)),
 #'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
 #' )) %>% setNames(seq(80, by = -5, length.out = 6))
-#' predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
+#' predictors <- mldp_disease_multi_age_predictors(patients, features, 5, 3)
 #'
 #'
 #' test <- purrr::map2_df(predictors, names(predictors), ~ .x$test %>%
@@ -192,29 +192,29 @@ mldpEHR.mortality_multi_age_predictors <- function(patients,
 #'     theme_bw()
 #'
 #' @export
-mldpEHR.disease_multi_age_predictors <- function(patients,
-                                                 features,
-                                                 step,
-                                                 nfolds,
-                                                 required_conditions = "id==id",
-                                                 xgboost_params = list(
-                                                     booster = "gbtree",
-                                                     objective = "binary:logistic",
-                                                     subsample = 0.7,
-                                                     max_depth = 3,
-                                                     colsample_bytree = 1,
-                                                     eta = 0.05,
-                                                     min_child_weight = 1,
-                                                     gamma = 0,
-                                                     eval_metric = "auc"
-                                                 ),
-                                                 nrounds = 1000) {
+mldp_disease_multi_age_predictors <- function(patients,
+                                              features,
+                                              step,
+                                              nfolds,
+                                              required_conditions = "id==id",
+                                              xgboost_params = list(
+                                                  booster = "gbtree",
+                                                  objective = "binary:logistic",
+                                                  subsample = 0.7,
+                                                  max_depth = 3,
+                                                  colsample_bytree = 1,
+                                                  eta = 0.05,
+                                                  min_child_weight = 1,
+                                                  gamma = 0,
+                                                  eval_metric = "auc"
+                                              ),
+                                              nrounds = 1000) {
     predictors <- list()
 
-    pop <- purrr::map(1:length(patients), ~ .mldpEHR.compute_target_disease(patients[[.x]], step, .x == 1)) %>%
+    pop <- purrr::map(1:length(patients), ~ .mldp_compute_target_disease(patients[[.x]], step, .x == 1)) %>%
         purrr::set_names(names(patients))
-    empirical_disease_prob <- .mldpEHR.disease_empirical_prob_for_disease(pop, step, required_conditions)
-    predictors[[1]] <- .mldpEHR.cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
+    empirical_disease_prob <- .mldp_disease_empirical_prob_for_disease(pop, step, required_conditions)
+    predictors[[1]] <- .mldp_cv_train_outcome(pop[[1]], features[[1]], nfolds, required_conditions)
 
     i <- 2
     while (i <= length(pop)) {
@@ -247,13 +247,13 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
             bind_rows(predictor_target)
 
         # find out how many will have the disease
-        source_disease <- .mldpEHR.disease_assign_expected(i, source_target, empirical_disease_prob)
+        source_disease <- .mldp_disease_assign_expected(i, source_target, empirical_disease_prob)
 
         # need to add the patients with missing target
         source_disease <- source_disease %>% bind_rows(pop[[i]] %>% anti_join(source_disease %>% select(id), by = "id"))
 
         # training the predictor
-        predictors[[i]] <- .mldpEHR.cv_train_outcome(
+        predictors[[i]] <- .mldp_cv_train_outcome(
             source_disease,
             features[[i]],
             nfolds,
@@ -288,22 +288,22 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 #' (each id was tested once in the fold it was not used for training)
 #' - xgboost_params - the set of parameters used in xgboost
 #' - nrounds - number of training iterations conducted
-.mldpEHR.cv_train_outcome <- function(target,
-                                      features,
-                                      folds,
-                                      required_conditions = "id==id",
-                                      xgboost_params = list(
-                                          booster = "gbtree",
-                                          objective = "binary:logistic",
-                                          subsample = 0.7,
-                                          max_depth = 3,
-                                          colsample_bytree = 1,
-                                          eta = 0.05,
-                                          min_child_weight = 1,
-                                          gamma = 0,
-                                          eval_metric = "auc"
-                                      ),
-                                      nrounds = 1000) {
+.mldp_cv_train_outcome <- function(target,
+                                   features,
+                                   folds,
+                                   required_conditions = "id==id",
+                                   xgboost_params = list(
+                                       booster = "gbtree",
+                                       objective = "binary:logistic",
+                                       subsample = 0.7,
+                                       max_depth = 3,
+                                       colsample_bytree = 1,
+                                       eta = 0.05,
+                                       min_child_weight = 1,
+                                       gamma = 0,
+                                       eval_metric = "auc"
+                                   ),
+                                   nrounds = 1000) {
     # assign folds to patiens, controlling for sex and target randomly
     if (!"fold" %in% colnames(target)) {
         target$fold <- NA
@@ -360,7 +360,7 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 
 
 #' analyze feature significance for a k-fold cross validation model using shaply values
-#' @param predictor - classification model trained by mldpEHR.cv_train_outcome
+#' @param predictor - classification model trained by mldp_cv_train_outcome
 #' @return a list with the 3 objects
 #' - summary - data frame containing for each feature the mean absolute shaply value for the feature across all training data
 #' - shap_by_patient - data frame containing for each patient and feature the feature value and mean shap value across all training folds
@@ -379,10 +379,10 @@ mldpEHR.disease_multi_age_predictors <- function(patients,
 #'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
 #'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
 #' ))
-#' predictor <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
-#' predictor_features <- mldpEHR.prediction_model_features(predictor[[1]])
+#' predictor <- mldp_mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.05)
+#' predictor_features <- mldp_prediction_model_features(predictor[[1]])
 #' @export
-mldpEHR.prediction_model_features <- function(predictor) {
+mldp_prediction_model_features <- function(predictor) {
     if (!"model" %in% names(predictor) | !"features" %in% names(predictor)) {
         stop("predictor must contain model and features information")
     }
@@ -430,7 +430,7 @@ mldpEHR.prediction_model_features <- function(predictor) {
 }
 
 
-.mldpEHR.compute_target_mortality <- function(pop, step, final_outcome) {
+.mldp_compute_target_mortality <- function(pop, step, final_outcome) {
     return(pop %>% mutate(
         step_outcome = ifelse(!is.na(death) & death <= age + step & death <= age + followup, "death", "alive"),
         target_class = ifelse(followup < step,
@@ -442,7 +442,7 @@ mldpEHR.prediction_model_features <- function(predictor) {
 }
 
 
-.mldpEHR.compute_target_disease <- function(pop, step, final_outcome) {
+.mldp_compute_target_disease <- function(pop, step, final_outcome) {
     return(pop %>% mutate(
         step_outcome =
             ifelse(!is.na(disease) & disease <= age + step,

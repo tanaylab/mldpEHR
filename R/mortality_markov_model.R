@@ -5,7 +5,7 @@
 #' each state to the next model state
 #' Patients with missing score are also included for this model to reflect actual population numbers.
 #'
-#' @param models - list of prediction models (output of \code{mldpEHR.cv_train_stitch_outcome})
+#' @param models - list of prediction models (output of \code{mldp_cv_train_stitch_outcome})
 #' @param outcome - time from oldest model (first) to target outcome
 #' @param step - time between prediction models
 #' @param qbins - quantile bin size of prediction score for which the markov model will define a state
@@ -37,8 +37,8 @@
 #'     id = 1:N,
 #'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 0.5))
 #' )) %>% setNames(seq(80, by = -5, length.out = 6))
-#' predictors <- mldpEHR.mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
-#' markov <- mldpEHR.mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.1))
+#' predictors <- mldp_mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
+#' markov <- mldp_mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.1))
 #' prob <- purrr::map2_df(markov, names(markov), ~
 #'     as_tibble(.x$model[[1]], rownames = "sbin") %>%
 #'         mutate(sex = 0, model = .y) %>%
@@ -54,7 +54,7 @@
 #' @export
 
 
-mldpEHR.mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by = 0.05), required_conditions = "id==id") {
+mldp_mortality_markov <- function(models, outcome, step, qbins = seq(0, 1, by = 0.05), required_conditions = "id==id") {
     markov_models <- list()
 
     # first model is the oldest model, used to compute the actual risk

@@ -27,7 +27,7 @@ setClass(
 #' The data frame can contain any additional columns required for patient filtering in the future.
 #'
 #' @param features list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.
-#' @param age_groups (optional) labels for the age groups
+#' @param age_groups (optional) labels for the age groups. If the \code{patients} list is named, the age_groups will be the names of the lists.
 #'
 #' @return a MldpEHR object
 #'
@@ -50,6 +50,8 @@ setClass(
 #'     )
 #' )
 #'
+#' names(patients) <- c("80", "75")
+#'
 #' features <- list(
 #'     tibble::tibble(
 #'         id = 1:10,
@@ -63,7 +65,7 @@ setClass(
 #'         feature2 = rnorm(10),
 #'         feature4 = sample(0:1, 10, replace = TRUE)
 #'     )
-#' ) #'
+#' )
 #'
 #' mldp <- MldpEHR(patients = patients, features = features)
 #'
@@ -121,6 +123,15 @@ MldpEHR <- function(patients, features, age_groups = NULL) {
             cli::cli_abort("All features must be numeric")
         }
     })
+
+    if (!is.null(names(patients))) {
+        age_groups <- names(patients)
+        if (!is.null(names(features))) {
+            if (!all(names(patients) == names(features))) {
+                cli::cli_abort("The names of {.field patients} and {.field features} must be the same")
+            }
+        }
+    }
 
     if (!is.null(age_groups)) {
         if (length(age_groups) != length(patients)) {

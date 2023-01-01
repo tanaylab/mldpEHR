@@ -1,6 +1,6 @@
 #' Download a single dataset
 #'
-#' @inheritParams mldpEHR.download_example_data
+#' @inheritParams mldp_download_example_data
 #' @noRd
 download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 * 60 * 2) {
     # set the 'timeout' option to 2 hours
@@ -92,7 +92,7 @@ download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 *
 #' }
 #'
 #' @export
-mldpEHR.download_example_data <- function(output_dir = file.path(getwd(), "examples"), datasets = c("longevity", "diabetes"), overwrite = FALSE, timeout = 60 * 60 * 2) {
+mldp_download_example_data <- function(output_dir = file.path(getwd(), "examples"), datasets = c("longevity", "diabetes"), overwrite = FALSE, timeout = 60 * 60 * 2) {
     datasets <- list(
         "longevity" = "https://mldp-ehr.s3.eu-west-1.amazonaws.com/example",
         "diabetes" = "https://mldp-ehr.s3.eu-west-1.amazonaws.com/example"
@@ -131,15 +131,15 @@ mldpEHR.download_example_data <- function(output_dir = file.path(getwd(), "examp
 #' diabetes_data <- mldpEHR::load_data("diabetes", file.path(getwd(), "examples"))
 #' }
 #'
-#' @inheritSection mldpEHR.download_example_data longevity.patients
-#' @inheritSection mldpEHR.download_example_data longevity.features
-#' @inheritSection mldpEHR.download_example_data diabetes.patients
-#' @inheritSection mldpEHR.download_example_data diabetes.features
+#' @inheritSection mldp_download_example_data longevity.patients
+#' @inheritSection mldp_download_example_data longevity.features
+#' @inheritSection mldp_download_example_data diabetes.patients
+#' @inheritSection mldp_download_example_data diabetes.features
 #'
 #' @export
-mldpEHR.load_data <- function(dataset, data_dir = file.path(getwd(), "examples")) {
+mldp_load_data <- function(dataset, data_dir = file.path(getwd(), "examples")) {
     if (!dir.exists(data_dir)) {
-        cli::cli_abort("Data directory {.file {data_dir}} does not exist. Use {.code mldpEHR.download_example_data()} to download the data.")
+        cli::cli_abort("Data directory {.file {data_dir}} does not exist. Use {.code mldp_download_example_data()} to download the data.")
     }
 
     patients <- readRDS(file.path(data_dir, paste0(dataset, ".patients.rds")))

@@ -3,7 +3,7 @@
 #' Each bin is assigned a state, and we are computing the probability for traversing from each state to the
 #' next model state.
 #' Patients with missing score are also included for this model to reflect actual population numbers
-#' @param models - list of prediction models (output of mldpEHR.cv_train_stitch_outcome)
+#' @param models - list of prediction models (output of mldp_cv_train_stitch_outcome)
 #' @param outcome - time from oldest model (first) to target outcome
 #' @param step - time between prediction models
 #' @param qbins - quantile bin size of prediction score for which the markov model will define a state
@@ -37,9 +37,9 @@
 #'     a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
 #'     b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
 #' )) %>% setNames(seq(80, by = -5, length.out = 6))
-#' predictors <- mldpEHR.disease_multi_age_predictors(patients, features, 5, 3)
+#' predictors <- mldp_disease_multi_age_predictors(patients, features, 5, 3)
 #' qbins <- seq(0, 1, by = 0.1)
-#' markov <- mldpEHR.disease_markov(predictors, 5, 5, qbins = qbins)
+#' markov <- mldp_disease_markov(predictors, 5, 5, qbins = qbins)
 #' prob <- purrr::map2_df(markov, names(markov), ~
 #'     as_tibble(.x$model[[1]], rownames = "sbin") %>%
 #'         mutate(model = .y)) %>%
@@ -53,7 +53,7 @@
 #' @export
 
 
-mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by = 0.05), required_conditions = "id==id") {
+mldp_disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by = 0.05), required_conditions = "id==id") {
     markov_models <- list()
 
     # first model is the oldest model, used to compute the actual risk
@@ -246,7 +246,7 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
 #' - any other columns that can be used in required conditions
 #' @param step - time between populations
 #' @param required_conditions - conditions that will be applied on patients that will be have a prediction score
-.mldpEHR.disease_empirical_prob_for_disease <- function(population, step, required_conditions = "id==id") {
+.mldp_disease_empirical_prob_for_disease <- function(population, step, required_conditions = "id==id") {
     km <- list()
     for (i in 1:length(population)) {
         k <- plyr::adply(0:2, 1, function(state) {
@@ -297,10 +297,10 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
 #' calculate expected number of disease patients
 #' @param index - index of entry in the empirical disase prob of the current age to start propogation from
 #' @param population_count - data.frame containing age, sex, and the number of patients available
-#' @param edp - empirical disease prob, output of .mldpEHR.disease_empirical_prob_for_disease
-.mldpEHR.disease_expected <- function(index, population_count, edp) {
+#' @param edp - empirical disease prob, output of .mldp_disease_empirical_prob_for_disease
+.mldp_disease_expected <- function(index, population_count, edp) {
     plyr::adply(population_count, 1, function(pc) {
-        pc %>% mutate(disease_n = .mldpEHR.disease_expected_sex(
+        pc %>% mutate(disease_n = .mldp_disease_expected_sex(
             pc$sex,
             pc$n,
             edp[1:index],
@@ -309,7 +309,7 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
     })
 }
 
-.mldpEHR.disease_expected_sex <- function(sex, n, disease_prob, mode) {
+.mldp_disease_expected_sex <- function(sex, n, disease_prob, mode) {
     if (n == 0 | length(disease_prob) == 0) {
         return(0)
     }
@@ -322,15 +322,15 @@ mldpEHR.disease_markov <- function(models, outcome, step, qbins = seq(0, 1, by =
 
     # message(paste(age, " : ", size, " : ", round(disease_count)))
     next_n <- round(n * (1 - (disease_prob[[length(disease_prob)]] %>% filter(sex == !!sex, mode == !!mode) %>% pull(est) %>% sum())))
-    return(disease_count + .mldpEHR.disease_expected_sex(sex, next_n, head(disease_prob, -1), min(mode + 1, 2)))
+    return(disease_count + .mldp_disease_expected_sex(sex, next_n, head(disease_prob, -1), min(mode + 1, 2)))
 }
 
 
-.mldpEHR.disease_assign_expected <- function(index, ordered_patients, empirical_disease_prob) {
+.mldp_disease_assign_expected <- function(index, ordered_patients, empirical_disease_prob) {
     patients_filtered <- ordered_patients %>%
         filter(eval(rlang::parse_expr(empirical_disease_prob$required_conditions))) %>%
         mutate(target_class = 0)
-    expected <- .mldpEHR.disease_expected(index, patients_filtered %>% count(sex), empirical_disease_prob$prob)
+    expected <- .mldp_disease_expected(index, patients_filtered %>% count(sex), empirical_disease_prob$prob)
     patients_filtered_class <- plyr::adply(expected, 1, function(a) {
         top_res <- a$disease_n
         ret <- patients_filtered %>% inner_join(a %>% select(sex), by = "sex")
