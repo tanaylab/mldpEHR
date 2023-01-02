@@ -2,85 +2,61 @@
 % Please edit documentation in R/mortality_markov_model.R
 \name{mldp_mortality_markov}
 \alias{mldp_mortality_markov}
-\title{Build a Markov probability model from multi-age prediction models}
+\title{Build a Markov probability model from multi-age prediction models of mortality}
 \usage{
 mldp_mortality_markov(
   models,
-  outcome,
-  step,
+  survival_years,
   qbins = seq(0, 1, by = 0.05),
-  required_conditions = "id==id"
+  required_conditions = NULL
 )
 }
 \arguments{
-\item{models}{\itemize{
-\item list of prediction models (output of \code{mldp_cv_train_stitch_outcome})
-}}
+\item{models}{a list of prediction models (output of \code{mldp_mortality_multi_age_predictors}).}
 
-\item{outcome}{\itemize{
-\item time from oldest model (first) to target outcome
-}}
+\item{survival_years}{The number of survival years the model aimed to predict for the oldest age group (see \code{mldp_mortality_multi_age_predictors}).}
 
-\item{step}{\itemize{
-\item time between prediction models
-}}
+\item{qbins}{a vector of quantile bins for the prediction score from which the markov model will define a state. Default is to use 10 equally sized quantiles.}
 
-\item{qbins}{\itemize{
-\item quantile bin size of prediction score for which the markov model will define a state
-}}
-
-\item{required_conditions}{\itemize{
-\item any filter to apply to the patients to filter out from model computation,
-for example limiting the time window
-}}
+\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link{dplyr::filter}} for more details.}
 }
 \value{
-a list of markov models (per age), each is a list with the following members:
+a list of with the following members:
 \itemize{
-\item model - matrix containing the probability for each quantile(score) bin to reach each of
-the target_classes provided in the oldest model.
-\item local.model - data.frame containing the probability for each quantile(score) bin to reach
-each of the quantile(score) bins of the next model by age.
-\item qbins -  bins
-\item target - data frame containing the target bin for this age model (to be used as outcome for
-the younger age model)
+\item{prob: }{a data frame containing the probability to survive ("alive") or die ("death") before the oldest age group + survival_years for each age, gender and score bin (quantile of score).}
+\item{models: }{a list of matrices containing the probability for each quantile(score) bin to reach
+each of the quantile(score) bins of the next model by age.}
 }
 }
 \description{
 All patients at a given age will be binned according to their model score (using quantiles).
 Each bin is assigned a state, and we are computing the probability for traversing from
-each state to the next model state
+each state to the next model state. \cr
 Patients with missing score are also included for this model to reflect actual population numbers.
 }
 \examples{
 
-library(dplyr)
 library(ggplot2)
-N <- 10000
-patients <- purrr::map(0:5, ~ data.frame(
-    id = 1:N,
-    sex = rep(c(1, 2), N / 2),
-    age = 80 - .x * 5,
-    death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
-    followup = .x * 5 + 5
-)) \%>\%
-    setNames(seq(80, by = -5, length.out = 6))
-features <- purrr::map(0:5, ~ data.frame(
-    id = 1:N,
-    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 0.5))
-)) \%>\% setNames(seq(80, by = -5, length.out = 6))
-predictors <- mldp_mortality_multi_age_predictors(patients, features, 5, 3, q_thresh = 0.2)
-markov <- mldp_mortality_markov(predictors, 5, 5, qbins = seq(0, 1, by = 0.1))
-prob <- purrr::map2_df(markov, names(markov), ~
-    as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
-        mutate(sex = 0, model = .y) \%>\%
-        bind_rows(as_tibble(.x$model[[2]], rownames = "sbin") \%>\% mutate(sex = 1, model = .y))) \%>\%
-    mutate(sbin = factor(sbin, levels = c(1:10, "death", "no_score")))
+library(dplyr)
 
-ggplot(prob, aes(x = sbin, y = death, colour = factor(sex), group = factor(sex))) +
+mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
+predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
+
+markov <- mldp_mortality_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
+
+head(markov$prob)
+
+# plot the probability of survival for each age group
+markov$prob \%>\%
+    mutate(sex = factor(c("male", "female")[sex])) \%>\%
+    ggplot(aes(x = sbin, y = alive, colour = sex, group = sex)) +
     geom_point() +
     geom_line() +
-    facet_wrap(~model, nrow = 1) +
-    theme_bw()
+    ylab("p(survival)") +
+    xlab("score bin") +
+    scale_color_manual(name = "", values = c("male" = "blue", "female" = "red")) +
+    facet_wrap(~age, nrow = 1) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 }

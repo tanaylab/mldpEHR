@@ -11,12 +11,13 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(tidyverse)
+library(glue)
 library(mldpEHR)
 ```
 
 # Building age-dependent longevity and disease models
 
-mldpEHR is a package for training age-dependent multivariate prediction models for longevity and disease. In this vignette we will describe the method for training a probablistic model for reaching the age of 85, but the method can be applied to any outcome of interest (e.g. a disease). 
+mldpEHR is a package for training age-dependent multivariate prediction models for longevity and disease. In this vignette we will start by describing the method for training a probablistic model for reaching the age of 85, and then show another example of training a model for predicting the risk of developing a disease like diabetes.
 
 ## The problem 
 
@@ -36,11 +37,11 @@ This way we can have a model even for patients with a very young age, as long as
 
 Now we have a set of models, each predicting the chance that a patient will get a good score at a given age, how can we combine them to get what we were after - the chance that a patient will reach the age of 85? 
 
-For that, we cam assemble the models into a Markov chain, where the state of the chain is the age of the patient, and the transition probabilities are the probability that a patient will get a good score at a given age. We can then sum up the probabilities of reaching the age of 85 for all the states in the chain, and that will be the probability that a patient will reach the age of 85.
+For that, we cam assemble the models into a Markov chain. We do that by binning the score for each age (using quantiles), and building a Markov model where the state of the chain is the age and score bin of the patient, and the transition probabilities are the probability that a patient will go from the bin to any other bin in the next age. We can then sum up the probabilities of reaching the age of 85 for all the states in the chain, and that will be the probability that a patient will reach the age of 85.
 
 ## The data
 
-In the vignette we will show how to use the mldpEHR package to use the method described above to predict the probability of reaching the age of 85. The data we will use was simulated as a EHR dataset of 2M patients with a follow-up of 5 years. 
+We will start by showing how to to use the method described above to predict the probability of reaching the age of 85. The data we will use was simulated as a EHR dataset of 2M patients with a follow-up of 5 years. 
 
 We will start by downloading it:
 
@@ -69,7 +70,7 @@ As we saw above, we can train a model prediction patient survival up to the age 
 
 Additionally, we need to provide the number of survival years (5 in our case, as we want to predict survival up to age 85), the number of folds for cross-validation of each model, and any expression for filtering of the patients. For example, here we will only use patients that have a complete blood count (CBC) test panel.
 
-Note that the training can take a while.
+Note that the training can take a while (around 30 minutes).
 
 ```{r}
 longevity <- mldp_mortality_multi_age_predictors(longevity_data@patients, longevity_data@features, survival_years = 5, nfolds = 5, required_conditions = "has_cbc")
@@ -79,148 +80,107 @@ longevity <- mldp_mortality_multi_age_predictors(longevity_data@patients, longev
 
 We can now investigate the features that were used in the models using SHAP (SHapley Additive exPlanations) values. For example, we can look at the features at age 80 (the oldest age we have data for):
 
-```{r}
-longevity_shap <- mldp_prediction_model_features(longevity)$shap_by_patient
+```{r, fig.width=10, fig.height=5}
+longevity_shap <- mldp_model_features(longevity[["80"]])
+
+head(longevity_shap$shap_by_patient)
+
+mldp_plot_shap(longevity_shap, n_features = 5)
 ```
 
-
-
-
-
-
-<!-- #region tags=[] -->
-## Building longevity models
-For each age, we will build a classification model for patient survival to age>= 85. 
-As our followup time is limited, we will use older age model score to define the target classification for the younger age model, basically stitching these models together.
-The data we need to provide consists of the entire popultation at each given age along with their sex, age, age at death and potential followup time (time until the end of the database).
-
-
-
-<!-- #endregion -->
-
-```{r}
-longevity <- mldpEHR.mortality_multi_age_predictors(longevity.patients, longevity.features, step = 5, nfolds = 5, required_conditions = "has_cbc")
-```
-
-<!-- #region tags=[] -->
-### Looking at feature significance
-
-
-<!-- #endregion -->
-
-```{r}
-features_sig <- purrr::map(longevity, ~ mldpEHR.prediction_model_features(.x)$summary %>% arrange(desc(mean_abs_shap)))
-head(features_sig[[1]])
-```
-
-```{r}
-N_PATIENTS <- 10000
-shap_features_80 <- mldpEHR.prediction_model_features(longevity[["80"]])$shap_by_patient %>%
-    filter(feature %in% head(features_sig[["80"]] %>% pull(feature))) %>%
-    group_by(feature) %>%
-    sample_n(N_PATIENTS) %>%
-    ungroup() %>%
-    mutate(feature = factor(feature, levels = head(features_sig[["80"]] %>% pull(feature))))
-options(repr.plot.width = 14, repr.plot.height = 2.5)
-ggplot(shap_features_80, aes(x = value, y = shap)) +
-    geom_point(size = 0.01, alpha = 0.3) +
-    facet_wrap(~feature, nrow = 1, scales = "free_y") +
-    theme_bw()
-```
 
 ## Computing Markovian probability model
 
+Given the models we trained, we can now compute the Markovian probability model. We can do that using the function `mldp_mortality_markov`:
 
 ```{r}
-longevity_markov <- mldpEHR.mortality_markov(longevity, SURVIVAL_YEARS, STEP, seq(0, 1, by = 0.1), required_conditions = glue::glue("time >= as.Date('2005-01-01') & time < as.Date('2016-01-01')"))
+longevity_markov <- mldp_mortality_markov(longevity, survival_years = 5, qbins = seq(0, 1, by = 0.1), required_conditions = glue::glue("time >= as.Date('2005-01-01') & time < as.Date('2016-01-01')"))
 ```
 
+The function takes the models we trained, the number of survival years, the quantiles to use for binning the scores, and any expression for filtering of the patients.
+
+The result is a list that contains the Markov model (`models`) and the final probability of reaching the age of 85 (`prob`):
+
 ```{r}
-longevity_prob <- purrr::map2_df(longevity_markov, names(longevity_markov), ~ as_tibble(.x$model[[1]], rownames = "sbin") %>%
-    mutate(sex = "male", age = .y) %>%
-    bind_rows(as_tibble(.x$model[[2]], rownames = "sbin") %>% mutate(sex = "female", age = .y)))
-options(repr.plot.width = 14, repr.plot.height = 2.5)
-ggplot(
-    longevity_prob %>% mutate(sbin = factor(sbin, levels = c(1:10, "death", "no_score"))),
-    aes(x = sbin, y = death, colour = factor(sex))
-) +
+head(longevity_markov$probs)
+head(longevity_markov$models[[1]])
+```
+
+
+We can now look at the probabilites for the different age groups: 
+
+```{r, fig.width=15, fig.height=5}
+longevity_markov$prob %>%
+    mutate(sex = factor(c("male", "female")[sex])) %>%
+    ggplot(aes(x = sbin, y = alive, colour = sex, group = sex)) +
     geom_point() +
-    facet_grid(. ~ age) +
-    theme_bw()
+    geom_line() +
+    ylab("p(survival up to age 85)") +
+    xlab("score bin") +
+    scale_color_manual(name = "", values = c("male" = "blue", "female" = "red")) +
+    facet_wrap(~age, nrow = 1) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
+## Predicting the probability for diabetes
 
-# Build a disease model for diabetes
-similar to longevity, will used simulated diabetes data, found in mldpEHR.data dataset:
-* diabetes.patients - a list of data frames, one for each age, containing the entire population of patients
-* diabetes.features - a list of data frames, one for each age, containing the features to be used for training the prediction models.
-
+Similar to the longevity example, we can use the method described above to predict the probability of developing diabetes. The data we will use was simulated as a EHR dataset of 2M patients with a follow-up of 5 years, and it can be downloaded using:
 
 ```{r}
-diabetes <- mldpEHR.disease_multi_age_predictors(diabetes.patients, diabetes.features, step = 5, nfolds = 5, required_conditions = "has_cbc")
+diabetes_data <- mldpEHR::mldp_load_data("diabetes")
+diabetes_data
 ```
 
-##Looking at feature significance
+This dataset is very similar to the longevity one, except for an additional column named `disease` which holds the age at which the patient developed diabetes and `NA` if the patient did not develop diabetes.
 
 ```{r}
-features_sig <- purrr::map2(diabetes, names(diabetes), ~ mldpEHR.prediction_model_features(.x)$summary %>%
-    mutate(age = .y) %>%
-    arrange(desc(mean_abs_shap)))
-head(features_sig[[1]])
+head(diabetes_data@patients$`80`)
 ```
 
-```{r}
-N_PATIENTS <- 10000
-shap_features_50 <- mldpEHR.prediction_model_features(diabetes[["50"]])$shap_by_patient %>%
-    filter(feature %in% head(features_sig[["50"]] %>% pull(feature))) %>%
-    group_by(feature) %>%
-    sample_n(N_PATIENTS) %>%
-    ungroup() %>%
-    mutate(feature = factor(feature, levels = head(features_sig[["50"]] %>% pull(feature))))
-options(repr.plot.width = 14, repr.plot.height = 2.5)
-ggplot(shap_features_50, aes(x = value, y = shap)) +
-    geom_point(size = 0.01, alpha = 0.3) +
-    facet_wrap(~feature, nrow = 1, scales = "free_y") +
-    theme_bw()
-```
+### Training the models 
+
+Similar to the longevity example, we start by training the models:
 
 ```{r}
-## Computing Markovian probability model
+diabetes <- mldp_disease_multi_age_predictors(diabetes_data@patients, diabetes_data@features, target_years = 5, nfolds = 5, required_conditions = "has_cbc")
 ```
 
-```{r}
-diabetes_markov <- mldpEHR.disease_markov(diabetes, 5, 5, seq(0, 1, by = 0.1), required_conditions = glue::glue("time >= as.Date('2005-01-01') & time < as.Date('2016-01-01')"))
+Note that instead of `survival_years` we use `target_years` which is the number of years to predict the onset of the disease after the last age. 
+
+### Investigating the models features
+
+We can now investigate the features that were used in the models using SHAP (SHapley Additive exPlanations) values. For example, we can look at the features at age 80 (the oldest age we have data for):
+
+```{r, fig.width=10, fig.height=5}
+diabetes_shap <- mldp_model_features(diabetes[["80"]])
+
+head(diabetes_shap$shap_by_patient)
+
+mldp_plot_shap(diabetes_shap, n_features = 5)
 ```
 
+### Computing Markovian probability model
+
+Given the models we trained, we can now compute the Markovian probability model. We can do that using the function `mldp_disease_markov`:
+
 ```{r}
-diabetes_prob <- purrr::map2_df(diabetes_markov, names(diabetes_markov), ~
-    as_tibble(.x$model[[1]], rownames = "sbin") %>%
-        mutate(sex = "male", age = .y) %>%
-        bind_rows(
-            as_tibble(.x$model[[2]], rownames = "sbin") %>% mutate(sex = "female", age = .y)
-        )) %>%
-    mutate(
-        sbin = factor(sbin, levels = c(1:10, "disease", "disease_death", "death", "no_score")),
-        total_disease = disease + disease_death
-    )
-options(repr.plot.width = 14, repr.plot.height = 2.5)
-ggplot(diabetes_prob %>% filter(as.numeric(sbin) <= 10), aes(x = sbin, y = total_disease, colour = factor(sex))) +
+diabetes_markov <- mldp_disease_markov(diabetes, target_years = 5, qbins = seq(0, 1, by = 0.1), required_conditions = glue::glue("time >= as.Date('2005-01-01') & time < as.Date('2016-01-01')"))
+```
+
+We can now look at the probabilites for the different age groups: 
+
+```{r, fig.width=15, fig.height=5}
+markov$prob %>%
+    mutate(sex = factor(c("male", "female")[sex])) %>%
+    ggplot(aes(x = sbin, y = disease + disease_death, colour = sex, group = sex)) +
     geom_point() +
-    facet_grid(. ~ age) +
-    theme_bw()
+    geom_line() +
+    ylab("p(disease)") +
+    xlab("score bin") +
+    scale_color_manual(name = "", values = c("male" = "blue", "female" = "red")) +
+    facet_wrap(~age, nrow = 1) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-```{r}
-shap <- mldpEHR.prediction_model_features(diabetes[["50"]])
-```
-
-```{r}
-head(shap$shap_by_fold)
-```
-
-```{r}
-nrow(shap$shap_by_fold)
-```
-
-```{r}
-```

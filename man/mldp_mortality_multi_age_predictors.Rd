@@ -9,7 +9,7 @@ mldp_mortality_multi_age_predictors(
   features,
   survival_years,
   nfolds,
-  required_conditions = "id==id",
+  required_conditions = NULL,
   q_thresh = 0.05,
   xgboost_params = list(booster = "gbtree", objective = "binary:logistic", subsample =
     0.7, max_depth = 3, colsample_bytree = 1, eta = 0.05, min_child_weight = 1, gamma =
@@ -24,6 +24,7 @@ mldp_mortality_multi_age_predictors(
 \item{age: }{age of patient. All patients in the data.frame must be the same age}
 \item{sex: }{1 for male, 2 for female}
 \item{death: }{age at death, NA if patient doesn't die by end of followup}
+\item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease}
 \item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
 }\cr
 
@@ -33,9 +34,9 @@ Note that every age group except the last one must have at least two patients pe
 
 \item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.}
 
-\item{survival_years}{the number of years to predict mortality for (after the oldest age). e.g. 5 for predicting mortality up to age 85}
+\item{survival_years}{the number of years to predict mortality for (after the oldest age). e.g. 5 for predicting mortality up to age 85 if the oldest age is 80.}
 
-\item{nfolds}{number of folds used for k-fold cross validation}
+\item{nfolds}{number of folds used for k-fold cross validation (at least 2)}
 
 \item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link{dplyr::filter}} for more details.}
 
@@ -56,6 +57,7 @@ with the following members:
 (each id was tested once in the fold it was not used for training)}
 \item{xgboost_params: }{the set of parameters used in xgboost}
 \item{nrounds: }{number of training iterations conducted}
+\item{age: }{the age group of the model}
 }
 }
 \description{
@@ -63,11 +65,11 @@ Given a set of patients and features, builds a set of models for predicting mort
 }
 \examples{
 
-# Load the example data
-mortality <- load_mortality_example_data()
+# Load a small example data
+mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
 
 #' Build predictors
-predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 3, q_thresh = 0.2)
+predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
 
 # Plot the ecdf of the score of each model for colored by outcome
 mldp_plot_multi_age_predictors_ecdf(predictors)

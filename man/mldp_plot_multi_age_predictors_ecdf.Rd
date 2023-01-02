@@ -16,9 +16,9 @@ a ggplot object
 For the oldest age the outcome is death, for younger ages the outcome is the score quantile of the next age group.
 }
 \examples{
-# Load the example data
-data <- load_mortality_example_data()
-predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 3, q_thresh = 0.2)
+# Load a small example data
+data <- load_mortality_example_data(N = 100, num_age_groups = 3)
+predictors <- mldp_mortality_multi_age_predictors(data@patients, data@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
 mldp_plot_multi_age_predictors_ecdf(predictors)
 
 }

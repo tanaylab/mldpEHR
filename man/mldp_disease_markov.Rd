@@ -2,90 +2,64 @@
 % Please edit documentation in R/disease_markov_model.R
 \name{mldp_disease_markov}
 \alias{mldp_disease_markov}
-\title{To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-Each bin is assigned a state, and we are computing the probability for traversing from each state to the
-next model state.
-Patients with missing score are also included for this model to reflect actual population numbers}
+\title{Build a Markov probability model from multi-age prediction models of a disease}
 \usage{
 mldp_disease_markov(
   models,
-  outcome,
-  step,
+  target_years,
   qbins = seq(0, 1, by = 0.05),
-  required_conditions = "id==id"
+  required_conditions = NULL
 )
 }
 \arguments{
-\item{models}{\itemize{
-\item list of prediction models (output of mldp_cv_train_stitch_outcome)
-}}
+\item{models}{a list of prediction models (output of \code{mldp_disease_multi_age_predictors}).}
 
-\item{outcome}{\itemize{
-\item time from oldest model (first) to target outcome
-}}
+\item{target_years}{the number of years to predict the disease for (e.g. 5 years).}
 
-\item{step}{\itemize{
-\item time between prediction models
-}}
+\item{qbins}{a vector of quantile bins for the prediction score from which the markov model will define a state. Default is to use 10 equally sized quantiles.}
 
-\item{qbins}{\itemize{
-\item quantile bin size of prediction score for which the markov model will define a state
-}}
-
-\item{required_conditions}{\itemize{
-\item any filter to apply to the patients to filter out from model computation,
-for example limiting the time window
-}}
+\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link{dplyr::filter}} for more details.}
 }
 \value{
-a list of markov models (per age), each is a list with the following members:
+a list of with the following members:
 \itemize{
-\item model - matrix containing the probability for each quantile(score) bin to reach each of the
-target_classes provided in the oldest model.
-\item local.model - data.frame containing the probability for each quantile(score) bin to reach each
-of the quantile(score) bins of the next model by age.
-\item qbins -  bins
-\item target - data frame containing the target bin for this age model (to be used as outcome for the
-younger age model)
+\item{prob: }{a data frame containing the life-long probability to get the disease ("disease"), die ("death") die with the disease ("death_disease"), or not get the disease and live ("healthy") for each age, gender and score bin (quantile of score).}#'
+\item{models: }{a list of matrices containing the probability for each quantile(score) bin to reach
+each of the quantile(score) bins of the next model by age.}
 }
 }
 \description{
-To implement this, all patients at a given age will be binned according to their model score (using quantiles).
-Each bin is assigned a state, and we are computing the probability for traversing from each state to the
-next model state.
-Patients with missing score are also included for this model to reflect actual population numbers
+All patients at a given age will be binned according to their model score (using quantiles).
+Each bin is assigned a state, and we are computing the probability for traversing from
+each state to the next model state. \cr
+Patients with missing score are also included for this model to reflect actual population numbers.
 }
 \examples{
 
-library(dplyr)
+
+# Load a small example data
+disease_data <- load_disease_example_data(N = 100, num_age_groups = 3)
+
+# Build predictors
+predictors <- mldp_disease_multi_age_predictors(disease_data@patients, disease_data@features, target_years = 5, nfolds = 2)
+
+markov <- mldp_disease_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
+
+# plot the life-long probability for the disease for each age and gender
+
 library(ggplot2)
-# build base predictor
-N <- 1000
-patients <- purrr::map(0:5, ~ data.frame(
-    id = 1:N,
-    sex = rep(1, N),
-    age = 80 - .x * 5,
-    death = c(rep(NA, 0.2 * N), rep(82, 0.8 * N)),
-    disease = rep(rep(c(NA, 81), each = N / 4), 2),
-    followup = .x * 5 + 5
-)) \%>\%
-    setNames(seq(80, by = -5, length.out = 6))
-features <- purrr::map(0:5, ~ data.frame(
-    id = 1:N,
-    a = c(rnorm(0.2 * N), rnorm(0.8 * N, mean = 2, sd = 1)),
-    b = rep(c(rnorm(N / 4), rnorm(N / 4, mean = 3)), 2)
-)) \%>\% setNames(seq(80, by = -5, length.out = 6))
-predictors <- mldp_disease_multi_age_predictors(patients, features, 5, 3)
-qbins <- seq(0, 1, by = 0.1)
-markov <- mldp_disease_markov(predictors, 5, 5, qbins = qbins)
-prob <- purrr::map2_df(markov, names(markov), ~
-    as_tibble(.x$model[[1]], rownames = "sbin") \%>\%
-        mutate(model = .y)) \%>\%
-    mutate(sbin = factor(sbin,
-        levels = c("death", 1:length(qbins), "disease", "disease_death", "no_score")
-    ))
-ggplot(prob, aes(x = sbin, y = disease + disease_death)) +
+library(dplyr)
+
+markov$prob \%>\%
+    mutate(sex = factor(c("male", "female")[sex])) \%>\%
+    ggplot(aes(x = sbin, y = disease + disease_death, colour = sex, group = sex)) +
     geom_point() +
-    facet_wrap(~model, nrow = 1) +
-    theme_bw()
+    geom_line() +
+    ylab("p(disease)") +
+    xlab("score bin") +
+    scale_color_manual(name = "", values = c("male" = "blue", "female" = "red")) +
+    facet_wrap(~age, nrow = 1) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
 }

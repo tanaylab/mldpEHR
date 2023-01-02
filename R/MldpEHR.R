@@ -19,8 +19,10 @@ setClass(
 #'   \item{age: }{age of patient. All patients in the data.frame must be the same age}
 #'   \item{sex: }{1 for male, 2 for female}
 #'   \item{death: }{age at death, NA if patient doesn't die by end of followup}
+#'   \item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease}
 #'   \item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
 #' }\cr
+#'
 #'
 #' The data frame can contain any additional columns required for patient filtering in the future.\cr
 #'
@@ -28,6 +30,7 @@ setClass(
 #'
 #' @param features list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.
 #' @param age_groups (optional) labels for the age groups. If the \code{patients} list is named, the age_groups will be the names of the lists.
+#' @param disease validate that the disease column exists and is correct
 #'
 #' @return a MldpEHR object
 #'
@@ -71,7 +74,7 @@ setClass(
 #'
 #' @rdname MldpEHR
 #' @export
-MldpEHR <- function(patients, features, age_groups = NULL) {
+MldpEHR <- function(patients, features, age_groups = NULL, disease = FALSE) {
     if (!all(sapply(patients, function(x) inherits(x, "data.frame")))) {
         cli::cli_abort("All patients must be data.frames")
     }
@@ -167,6 +170,14 @@ MldpEHR <- function(patients, features, age_groups = NULL) {
     # make sure that age groups are decreasing monotonically
     if (!all(diff(purrr::map_dbl(patients, ~ .x$age[1])) < 0)) {
         cli::cli_abort("Age groups must be decreasing monotonically")
+    }
+
+    if (disease) {
+        purrr::walk(patients, function(x) {
+            if (!"disease" %in% colnames(x)) {
+                cli::cli_abort("All patients must have a {.field disease} column")
+            }
+        })
     }
 
     new("MldpEHR", patients = patients, features = features, age_groups = age_groups)

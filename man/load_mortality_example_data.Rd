@@ -4,10 +4,12 @@
 \alias{load_mortality_example_data}
 \title{Load a mock dataset for mortality prediction}
 \usage{
-load_mortality_example_data(N = 1000)
+load_mortality_example_data(N = 1000, num_age_groups = 5)
 }
 \arguments{
 \item{N}{The number of patients to generate}
+
+\item{num_age_groups}{The number of age groups to generate}
 }
 \value{
 an MldpEHR object
@@ -16,6 +18,6 @@ an MldpEHR object
 Load a mock dataset for mortality prediction
 }
 \examples{
-mortality_data <- load_mortality_data(1000)
+mortality_data <- load_mortality_example_data(1000)
 
 }

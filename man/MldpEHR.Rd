@@ -4,7 +4,7 @@
 \alias{MldpEHR}
 \title{Create MldpEHR object}
 \usage{
-MldpEHR(patients, features, age_groups = NULL)
+MldpEHR(patients, features, age_groups = NULL, disease = FALSE)
 }
 \arguments{
 \item{patients}{list of data.frames of all the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each patient data.frame contains the following columns:
@@ -13,6 +13,7 @@ MldpEHR(patients, features, age_groups = NULL)
 \item{age: }{age of patient. All patients in the data.frame must be the same age}
 \item{sex: }{1 for male, 2 for female}
 \item{death: }{age at death, NA if patient doesn't die by end of followup}
+\item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease}
 \item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
 }\cr
 
@@ -23,6 +24,8 @@ Note that every age group except the last one must have at least two patients pe
 \item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.}
 
 \item{age_groups}{(optional) labels for the age groups. If the \code{patients} list is named, the age_groups will be the names of the lists.}
+
+\item{disease}{validate that the disease column exists and is correct}
 }
 \value{
 a MldpEHR object

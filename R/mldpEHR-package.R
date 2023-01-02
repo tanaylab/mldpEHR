@@ -6,6 +6,7 @@
 
 #' @import dplyr
 #' @import tidyr
+#' @importFrom purrr map
 #' @importFrom stats ecdf
 #' @importFrom stats predict
 #' @importFrom utils head
