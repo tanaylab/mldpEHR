@@ -9,3 +9,5 @@
 ^\.github$
 ^data-raw$
 ^vignettes/articles$
+^examples$
+^dev$
