@@ -1,36 +1,41 @@
 Package: mldpEHR
-Title: Markovian Lifelong Mortality and Disease Predisposition Models for Electronic Health Records
+Title: Markovian Lifelong Mortality and Disease Predisposition Models for
+    Electronic Health Records
 Version: 0.0.0.9000
 Authors@R: c(
     person("Netta", "Mendelson-Cohen", , "netta.mendelsoncohen@weizmann.ac.il", role = c("aut", "cre")),
-    person("Aviezer", "Lifshitz", , "aviezer.lifshitz@weizmann.ac.il", role = c("aut")),
+    person("Aviezer", "Lifshitz", , "aviezer.lifshitz@weizmann.ac.il", role = "aut"),
     person("Weizmann Institute of Science", role = "cph")
   )
-Description: A toolkit for building and testing lifelong prediction models for all cause mortality (longevity) and disease.
+Description: A toolkit for building and testing lifelong prediction models
+    for all cause mortality (longevity) and disease.
 License: MIT + file LICENSE
+URL: https://tanaylab.github.io/mldpEHR/
 BugReports: https://github.com/tanaylab/mldpEHR/issues
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
 Depends:
     R (>= 3.0.0)
 Imports:
+    cli,
+    cmprsk,
     dplyr,
-    tidyr,
+    ggplot2,
+    methods,
+    parallel,
     plyr,
+    progress,
     purrr,
     rlang,
-    glue,
-    xgboost,
-    cmprsk,
-    progress,
     stats,
     tibble,
-    ggplot2,
-    cli,
-    withr
+    tidyr,
+    utils,
+    withr,
+    xgboost
 Suggests: 
+    glue,
     rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-URL: https://tanaylab.github.io/mldpEHR/
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3

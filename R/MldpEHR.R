@@ -183,8 +183,6 @@ MldpEHR <- function(patients, features, age_groups = NULL, disease = FALSE) {
     new("MldpEHR", patients = patients, features = features, age_groups = age_groups)
 }
 
-#' @export
-#' @noRd
 setMethod(
     "show",
     signature = "MldpEHR",

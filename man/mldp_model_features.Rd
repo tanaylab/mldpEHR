@@ -25,7 +25,14 @@ Extract statistics on the features used in a k-fold cross-validation model using
 mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
 
 #' Build predictors
-predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.05)
+predictors <- mldp_mortality_multi_age_predictors(
+    mortality@patients,
+    mortality@features,
+    survival_years = 5,
+    nfolds = 2,
+    q_thresh = 0.05,
+    nthread = 2 # CRAN allows only 2 cores
+)
 
 predictor_features <- mldp_model_features(predictors[[1]])
 

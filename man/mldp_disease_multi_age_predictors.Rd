@@ -13,6 +13,7 @@ mldp_disease_multi_age_predictors(
   xgboost_params = list(booster = "gbtree", objective = "binary:logistic", subsample =
     0.7, max_depth = 3, colsample_bytree = 1, eta = 0.05, min_child_weight = 1, gamma =
     0, eval_metric = "auc"),
+  nthread = parallel::detectCores(),
   nrounds = 1000
 )
 }
@@ -37,9 +38,11 @@ Note that every age group except the last one must have at least two patients pe
 
 \item{nfolds}{number of folds used for k-fold cross validation (at least 2)}
 
-\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link{dplyr::filter}} for more details.}
+\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link[dplyr]{filter}} for more details.}
 
 \item{xgboost_params}{parameters used for xgboost model training}
+
+\item{nthread}{number of threads to use for training. Default is all available threads.}
 
 \item{nrounds}{number of training rounds}
 }
@@ -52,7 +55,13 @@ Given a set of patients and features, builds a set of models for predicting the 
 disease_data <- load_disease_example_data(N = 100, num_age_groups = 3)
 
 # Build predictors
-predictors <- mldp_disease_multi_age_predictors(disease_data@patients, disease_data@features, target_years = 5, nfolds = 2)
+predictors <- mldp_disease_multi_age_predictors(
+    disease_data@patients,
+    disease_data@features,
+    target_years = 5,
+    nfolds = 2,
+    nthread = 2 # CRAN allows only 2 cores
+)
 
 mldp_plot_multi_age_predictors_ecdf(predictors)
 

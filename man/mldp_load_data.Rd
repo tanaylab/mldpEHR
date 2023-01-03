@@ -83,10 +83,14 @@ Each data frame has 86 columns. The features include sex and common labs, quanti
 }
 
 \examples{
-\dontrun{
-mldpEHR::download_example_data(file.path(getwd(), "examples"))
-longevity_data <- mldpEHR::load_data("longevity", file.path(getwd(), "examples"))
-diabetes_data <- mldpEHR::load_data("diabetes", file.path(getwd(), "examples"))
+\donttest{
+mldp_download_example_data(file.path(getwd(), "examples"))
+longevity_data <- mldp_load_data("longevity", file.path(getwd(), "examples"))
+diabetes_data <- mldp_load_data("diabetes", file.path(getwd(), "examples"))
+}
+
+\dontshow{
+unlink("examples", recursive = TRUE)
 }
 
 }

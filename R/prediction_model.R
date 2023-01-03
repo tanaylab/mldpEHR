@@ -6,10 +6,11 @@
 #'
 #' @param survival_years the number of years to predict mortality for (after the oldest age). e.g. 5 for predicting mortality up to age 85 if the oldest age is 80.
 #' @param nfolds number of folds used for k-fold cross validation (at least 2)
-#' @param required_conditions a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link{dplyr::filter}} for more details.
+#' @param required_conditions a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link[dplyr]{filter}} for more details.
 #' @param q_thresh quantile of the predicted score to use for the next age group. Default is 0.05, which means the top 5% of the predicted score will be used for the next age group.
 #' @param xgboost_params parameters used for xgboost model training
 #' @param nrounds number of training rounds
+#' @param nthread number of threads to use for training. Default is all available threads.
 #' @return a list of predictors, for each age. Each predictor is a list
 #' with the following members:
 #' \itemize{
@@ -30,7 +31,14 @@
 #' mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
 #'
 #' #' Build predictors
-#' predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
+#' predictors <- mldp_mortality_multi_age_predictors(
+#'     mortality@patients,
+#'     mortality@features,
+#'     survival_years = 5,
+#'     nfolds = 2,
+#'     q_thresh = 0.2,
+#'     nthread = 2 # CRAN allows only 2 cores
+#' )
 #'
 #' # Plot the ecdf of the score of each model for colored by outcome
 #' mldp_plot_multi_age_predictors_ecdf(predictors)
@@ -54,6 +62,7 @@ mldp_mortality_multi_age_predictors <- function(patients,
                                                     gamma = 0,
                                                     eval_metric = "auc"
                                                 ),
+                                                nthread = parallel::detectCores(),
                                                 nrounds = 1000) {
     mldp <- MldpEHR(patients, features)
     steps <- c(survival_years, mldp_get_age_steps(mldp))
@@ -62,7 +71,7 @@ mldp_mortality_multi_age_predictors <- function(patients,
     pop <- purrr::map(seq_along(mldp@patients), ~ mldp_compute_target_mortality(mldp@patients[[.x]], steps[.x], .x == 1)) %>%
         purrr::set_names(names(mldp@patients))
 
-    predictors[[1]] <- mldp_cv_train_outcome(pop[[1]], mldp@features[[1]], nfolds, required_conditions)
+    predictors[[1]] <- mldp_cv_train_outcome(pop[[1]], mldp@features[[1]], nfolds, required_conditions, nthread = nthread)
     predictors[[1]]$age <- pop[[1]]$age[1]
     i <- 2
     while (i <= length(pop)) {
@@ -96,7 +105,8 @@ mldp_mortality_multi_age_predictors <- function(patients,
             nfolds,
             required_conditions = required_conditions,
             xgboost_params = predictors[[i - 1]]$xgboost_params,
-            nrounds = predictors[[i - 1]]$nrounds
+            nrounds = predictors[[i - 1]]$nrounds,
+            nthread = nthread
         )
 
         predictors[[i]]$age <- pop[[i]]$age[1]
@@ -121,7 +131,13 @@ mldp_mortality_multi_age_predictors <- function(patients,
 #' disease_data <- load_disease_example_data(N = 100, num_age_groups = 3)
 #'
 #' # Build predictors
-#' predictors <- mldp_disease_multi_age_predictors(disease_data@patients, disease_data@features, target_years = 5, nfolds = 2)
+#' predictors <- mldp_disease_multi_age_predictors(
+#'     disease_data@patients,
+#'     disease_data@features,
+#'     target_years = 5,
+#'     nfolds = 2,
+#'     nthread = 2 # CRAN allows only 2 cores
+#' )
 #'
 #' mldp_plot_multi_age_predictors_ecdf(predictors)
 #'
@@ -143,6 +159,7 @@ mldp_disease_multi_age_predictors <- function(patients,
                                                   gamma = 0,
                                                   eval_metric = "auc"
                                               ),
+                                              nthread = parallel::detectCores(),
                                               nrounds = 1000) {
     mldp <- MldpEHR(patients, features, disease = TRUE)
     steps <- c(target_years, mldp_get_age_steps(mldp))
@@ -153,7 +170,7 @@ mldp_disease_multi_age_predictors <- function(patients,
     pop <- purrr::map(1:length(patients), ~ mldp_compute_target_disease(mldp@patients[[.x]], steps[.x], .x == 1)) %>%
         purrr::set_names(names(patients))
     empirical_disease_prob <- mldp_disease_empirical_prob_for_disease(pop, steps, required_conditions)
-    predictors[[1]] <- mldp_cv_train_outcome(pop[[1]], mldp@features[[1]], nfolds, required_conditions)
+    predictors[[1]] <- mldp_cv_train_outcome(pop[[1]], mldp@features[[1]], nfolds, required_conditions, nthread = nthread)
     predictors[[1]]$age <- pop[[1]]$age[1]
 
     i <- 2
@@ -199,7 +216,8 @@ mldp_disease_multi_age_predictors <- function(patients,
             nfolds,
             required_conditions = required_conditions,
             xgboost_params = predictors[[i - 1]]$xgboost_params,
-            nrounds = predictors[[i - 1]]$nrounds
+            nrounds = predictors[[i - 1]]$nrounds,
+            nthread = nthread
         )
         predictors[[i]]$age <- pop[[i]]$age[1]
         i <- i + 1
@@ -221,6 +239,7 @@ mldp_disease_multi_age_predictors <- function(patients,
 #' @param folds number of cross-validation folds
 #' @param xgboost_params parameters used for xgboost model training
 #' @param nrounds number of training rounds
+#' @param nthread number of threads to use for training. Default is all available threads.
 #' @return a predictor, a list with the following elements
 #' \itemize{
 #' \item{model: }{a list of xgboost models, for each fold}
@@ -250,6 +269,7 @@ mldp_cv_train_outcome <- function(target,
                                       gamma = 0,
                                       eval_metric = "auc"
                                   ),
+                                  nthread = paralell::detectCores(),
                                   nrounds = 1000) {
     if (folds < 2) {
         cli::cli_abort("number of folds must be at least 2")
@@ -291,7 +311,7 @@ mldp_cv_train_outcome <- function(target,
         )
         dtest <- as.matrix(target_features %>% filter(fold == cur_fold) %>% select(-id, -fold, -target_class))
 
-        xgb <- xgboost::xgb.train(data = dtrain, nthread = 24, params = xgboost_params, nrounds = nrounds, verbose = 1)
+        xgb <- xgboost::xgb.train(data = dtrain, nthread = nthread, params = xgboost_params, nrounds = nrounds, verbose = 1)
         train <- target_features %>%
             filter(fold != cur_fold, !is.na(target_class)) %>%
             select(id, fold, target_class) %>%
@@ -332,7 +352,14 @@ mldp_cv_train_outcome <- function(target,
 #' mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
 #'
 #' #' Build predictors
-#' predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.05)
+#' predictors <- mldp_mortality_multi_age_predictors(
+#'     mortality@patients,
+#'     mortality@features,
+#'     survival_years = 5,
+#'     nfolds = 2,
+#'     q_thresh = 0.05,
+#'     nthread = 2 # CRAN allows only 2 cores
+#' )
 #'
 #' predictor_features <- mldp_model_features(predictors[[1]])
 #'
@@ -378,9 +405,9 @@ mldp_model_features <- function(predictor) {
             )) %>% purrr::set_names(colnames(predictor$features %>% select(-id)))
         )
     shap_id_val <- shap_id %>%
-        pivot_longer(!id, names_to = "feature", values_to = "shap") %>%
+        tidyr::pivot_longer(!id, names_to = "feature", values_to = "shap") %>%
         left_join(
-            predictor$features %>% pivot_longer(!id, names_to = "feature", values_to = "value"),
+            predictor$features %>% tidyr::pivot_longer(!id, names_to = "feature", values_to = "value"),
             by = c("id", "feature")
         )
     shap_summary <- data.frame(

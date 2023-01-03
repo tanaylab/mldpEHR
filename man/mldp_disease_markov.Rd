@@ -18,7 +18,7 @@ mldp_disease_markov(
 
 \item{qbins}{a vector of quantile bins for the prediction score from which the markov model will define a state. Default is to use 10 equally sized quantiles.}
 
-\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link{dplyr::filter}} for more details.}
+\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link[dplyr]{filter}} for more details.}
 }
 \value{
 a list of with the following members:
@@ -41,7 +41,12 @@ Patients with missing score are also included for this model to reflect actual p
 disease_data <- load_disease_example_data(N = 100, num_age_groups = 3)
 
 # Build predictors
-predictors <- mldp_disease_multi_age_predictors(disease_data@patients, disease_data@features, target_years = 5, nfolds = 2)
+predictors <- mldp_disease_multi_age_predictors(
+    disease_data@patients,
+    disease_data@features,
+    target_years = 5,
+    nfolds = 2
+)
 
 markov <- mldp_disease_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
 

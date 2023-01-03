@@ -71,7 +71,15 @@ Plot SHAP (SHapley Additive exPlanations) values for a model
 \examples{
 
 mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
-predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
+predictors <- mldp_mortality_multi_age_predictors(
+    mortality@patients,
+    mortality@features,
+    survival_years = 5,
+    nfolds = 2,
+    q_thresh = 0.2,
+    nthread = 2 # CRAN allows only 2 cores
+)
+
 predictor_shap <- mldp_model_features(predictors$`80`)
 mldp_plot_shap(predictor_shap)
 

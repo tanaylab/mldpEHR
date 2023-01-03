@@ -14,6 +14,7 @@ mldp_mortality_multi_age_predictors(
   xgboost_params = list(booster = "gbtree", objective = "binary:logistic", subsample =
     0.7, max_depth = 3, colsample_bytree = 1, eta = 0.05, min_child_weight = 1, gamma =
     0, eval_metric = "auc"),
+  nthread = parallel::detectCores(),
   nrounds = 1000
 )
 }
@@ -38,11 +39,13 @@ Note that every age group except the last one must have at least two patients pe
 
 \item{nfolds}{number of folds used for k-fold cross validation (at least 2)}
 
-\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link{dplyr::filter}} for more details.}
+\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link[dplyr]{filter}} for more details.}
 
 \item{q_thresh}{quantile of the predicted score to use for the next age group. Default is 0.05, which means the top 5\% of the predicted score will be used for the next age group.}
 
 \item{xgboost_params}{parameters used for xgboost model training}
+
+\item{nthread}{number of threads to use for training. Default is all available threads.}
 
 \item{nrounds}{number of training rounds}
 }
@@ -69,7 +72,14 @@ Given a set of patients and features, builds a set of models for predicting mort
 mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
 
 #' Build predictors
-predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
+predictors <- mldp_mortality_multi_age_predictors(
+    mortality@patients,
+    mortality@features,
+    survival_years = 5,
+    nfolds = 2,
+    q_thresh = 0.2,
+    nthread = 2 # CRAN allows only 2 cores
+)
 
 # Plot the ecdf of the score of each model for colored by outcome
 mldp_plot_multi_age_predictors_ecdf(predictors)

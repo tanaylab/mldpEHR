@@ -18,7 +18,7 @@ mldp_mortality_markov(
 
 \item{qbins}{a vector of quantile bins for the prediction score from which the markov model will define a state. Default is to use 10 equally sized quantiles.}
 
-\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link{dplyr::filter}} for more details.}
+\item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link[dplyr]{filter}} for more details.}
 }
 \value{
 a list of with the following members:
@@ -40,7 +40,14 @@ library(ggplot2)
 library(dplyr)
 
 mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
-predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
+predictors <- mldp_mortality_multi_age_predictors(
+    mortality@patients,
+    mortality@features,
+    survival_years = 5,
+    nfolds = 2,
+    q_thresh = 0.2,
+    nthread = 2 # CRAN allows only 2 cores
+)
 
 markov <- mldp_mortality_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
 

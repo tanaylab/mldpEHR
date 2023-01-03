@@ -24,7 +24,12 @@
 #' disease_data <- load_disease_example_data(N = 100, num_age_groups = 3)
 #'
 #' # Build predictors
-#' predictors <- mldp_disease_multi_age_predictors(disease_data@patients, disease_data@features, target_years = 5, nfolds = 2)
+#' predictors <- mldp_disease_multi_age_predictors(
+#'     disease_data@patients,
+#'     disease_data@features,
+#'     target_years = 5,
+#'     nfolds = 2
+#' )
 #'
 #' markov <- mldp_disease_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
 #'
@@ -129,7 +134,7 @@ disease_markov_model_for_stitch_model <- function(markov, model, step, qbins, re
         select(-s) %>%
         mutate(outcome = factor(outcome, levels = c(levels(markov$target$target_sbin), "disease_death", "death"))) %>%
         arrange(outcome) %>%
-        pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
+        tidyr::pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
         arrange(sex, sbin)
 
     local_model_by_sex <- disease_local_model_by_sex(local_model, qbins)
@@ -183,7 +188,7 @@ disease_markov_model_for_outcome_model <- function(model, step, qbins, required_
         select(-s) %>%
         mutate(outcome = factor(outcome, levels = c("disease", "disease_death", "death", "healthy"))) %>%
         arrange(outcome) %>%
-        pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
+        tidyr::pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
         arrange(sex, sbin)
 
     local_model_by_sex <- disease_local_model_by_sex(local_model, qbins)

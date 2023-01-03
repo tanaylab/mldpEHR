@@ -8,7 +8,7 @@
 #' @param models a list of prediction models (output of \code{mldp_mortality_multi_age_predictors}).
 #' @param survival_years The number of survival years the model aimed to predict for the oldest age group (see \code{mldp_mortality_multi_age_predictors}).
 #' @param qbins a vector of quantile bins for the prediction score from which the markov model will define a state. Default is to use 10 equally sized quantiles.
-#' @param required_conditions a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link{dplyr::filter}} for more details.
+#' @param required_conditions a string with an expression for any filter to apply to the patients to filter out from model computation. Can be used to filter out patients with missing data or limiting the time window. See \code{\link[dplyr]{filter}} for more details.
 #'
 #' @return a list of with the following members:
 #' \itemize{
@@ -23,7 +23,14 @@
 #' library(dplyr)
 #'
 #' mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
-#' predictors <- mldp_mortality_multi_age_predictors(mortality@patients, mortality@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
+#' predictors <- mldp_mortality_multi_age_predictors(
+#'     mortality@patients,
+#'     mortality@features,
+#'     survival_years = 5,
+#'     nfolds = 2,
+#'     q_thresh = 0.2,
+#'     nthread = 2 # CRAN allows only 2 cores
+#' )
 #'
 #' markov <- mldp_mortality_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
 #'
@@ -117,7 +124,7 @@ mortality_markov_model_for_stitch_model <- function(markov, model, step, qbins, 
     local_model <- km_model %>%
         mutate(outcome = factor(outcome, levels = rownames(markov$local_model[[1]]))) %>%
         arrange(outcome, sbin) %>%
-        pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
+        tidyr::pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
         arrange(sex, sbin) %>%
         replace(is.na(.), 0)
 
@@ -161,7 +168,7 @@ mortality_markov_model_for_outcome_model <- function(model, step, qbins, require
     # combining all outcome states
     local_model <- km_model %>%
         bind_rows(censored_estimate) %>% # change target to factor?
-        pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
+        tidyr::pivot_wider(id_cols = c(sbin, sex), names_from = outcome, values_from = est) %>%
         arrange(sex, sbin)
 
     local_model_by_sex <- mortality_local_model_by_sex(local_model, qbins)

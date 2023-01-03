@@ -91,8 +91,12 @@ Each data frame has 86 columns. The features include sex and common labs, quanti
 }
 
 \examples{
-\dontrun{
-download_data()
+\donttest{
+mldp_download_example_data()
+}
+
+\dontshow{
+unlink("examples", recursive = TRUE)
 }
 
 }

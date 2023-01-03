@@ -5,10 +5,10 @@
 ## usethis namespace: end
 
 #' @import dplyr
-#' @import tidyr
 #' @importFrom purrr map
 #' @importFrom stats ecdf
 #' @importFrom stats predict
 #' @importFrom utils head
-
+#' @importFrom stats setNames time
+#' @importFrom methods new
 NULL

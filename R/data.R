@@ -10,7 +10,7 @@ download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 *
             file_path <- file.path(output_dir, file)
             if (!file.exists(file_path) || overwrite) {
                 cli::cli_alert_info("Downloading {.file {file}}")
-                download.file(paste0(url, "/", file), file_path)
+                utils::download.file(paste0(url, "/", file), file_path)
             } else {
                 cli::cli_alert_info("Skipping {.file {file}} (set {.code overwrite = TRUE} to overwrite)")
             }
@@ -87,8 +87,12 @@ download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 *
 #' @return Nothing
 #'
 #' @examples
-#' \dontrun{
-#' download_data()
+#' \donttest{
+#' mldp_download_example_data()
+#' }
+#'
+#' \dontshow{
+#' unlink("examples", recursive = TRUE)
 #' }
 #'
 #' @export
@@ -125,10 +129,14 @@ mldp_download_example_data <- function(output_dir = file.path(getwd(), "examples
 #' @return an MldpEHR object
 #'
 #' @examples
-#' \dontrun{
-#' mldpEHR::download_example_data(file.path(getwd(), "examples"))
-#' longevity_data <- mldpEHR::load_data("longevity", file.path(getwd(), "examples"))
-#' diabetes_data <- mldpEHR::load_data("diabetes", file.path(getwd(), "examples"))
+#' \donttest{
+#' mldp_download_example_data(file.path(getwd(), "examples"))
+#' longevity_data <- mldp_load_data("longevity", file.path(getwd(), "examples"))
+#' diabetes_data <- mldp_load_data("diabetes", file.path(getwd(), "examples"))
+#' }
+#'
+#' \dontshow{
+#' unlink("examples", recursive = TRUE)
 #' }
 #'
 #' @inheritSection mldp_download_example_data longevity.patients

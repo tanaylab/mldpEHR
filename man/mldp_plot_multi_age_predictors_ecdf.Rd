@@ -18,7 +18,14 @@ For the oldest age the outcome is death, for younger ages the outcome is the sco
 \examples{
 # Load a small example data
 data <- load_mortality_example_data(N = 100, num_age_groups = 3)
-predictors <- mldp_mortality_multi_age_predictors(data@patients, data@features, survival_years = 5, nfolds = 2, q_thresh = 0.2)
+predictors <- mldp_mortality_multi_age_predictors(
+    data@patients,
+    data@features,
+    survival_years = 5,
+    nfolds = 2,
+    q_thresh = 0.2,
+    nthread = 2 # CRAN allows only 2 cores
+)
 mldp_plot_multi_age_predictors_ecdf(predictors)
 
 }
