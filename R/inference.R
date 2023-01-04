@@ -7,7 +7,7 @@
 #' @param data A data frame with "id", "age", "sex" and the same features as the training data, or a MldpEHR object. The "age" field should be in years and the "sex" field should contain
 #' 1 for male and 2 for female.
 #' @param predictors A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}
-#' @param markov A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.
+#' @param markov_models A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.
 #' @param outcome A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") and if it fails, an it would choose the first outcome in the \code{markov$prob} data frame.
 #'
 #' @return a data frame with the following columns:
@@ -54,7 +54,12 @@
 #'
 #' new_data <- load_disease_example_data(N = 1e3, num_age_groups = 3)
 #'
-#' scores_disease <- mldp_predict_multi_age(new_data, predictors_disease, markov_disease, c("disease", "disease_death"))
+#' scores_disease <- mldp_predict_multi_age(
+#'     new_data,
+#'     predictors_disease,
+#'     markov_disease,
+#'     c("disease", "disease_death")
+#' )
 #'
 #' head(scores)
 #'

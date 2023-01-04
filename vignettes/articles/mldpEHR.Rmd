@@ -17,7 +17,7 @@ library(mldpEHR)
 
 # Building age-dependent longevity and disease models
 
-mldpEHR is a package for training age-dependent multivariate prediction models for longevity and disease. In this vignette we will start by describing the method for training a probablistic model for reaching the age of 85, and then show another example of training a model for predicting the risk of developing a disease like diabetes.
+mldpEHR is a package for training age-dependent multivariate prediction models for longevity and disease. In this vignette we will start by describing the method for training a probabilistic model for reaching the age of 85, and then show another example of training a model for predicting the risk of developing a disease like diabetes.
 
 ## The problem 
 
@@ -108,7 +108,7 @@ head(longevity_markov$models[[1]])
 ```
 
 
-We can now look at the probabilites for the different age groups: 
+We can now look at the probabilities for the different age groups: 
 
 ```{r, fig.width=15, fig.height=5}
 longevity_markov$prob %>%
@@ -169,7 +169,7 @@ Given the models we trained, we can now compute the Markovian probability model.
 diabetes_markov <- mldp_disease_markov(diabetes, target_years = 5, qbins = seq(0, 1, by = 0.1), required_conditions = glue::glue("time >= as.Date('2005-01-01') & time < as.Date('2016-01-01')"))
 ```
 
-We can now look at the probabilites for the different age groups: 
+We can now look at the probabilities for the different age groups: 
 
 ```{r, fig.width=15, fig.height=5}
 diabetes_markov$prob %>%

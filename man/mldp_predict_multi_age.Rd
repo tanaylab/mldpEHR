@@ -12,9 +12,9 @@ mldp_predict_multi_age(data, predictors, markov_models = NULL, outcome = NULL)
 
 \item{predictors}{A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}}
 
-\item{outcome}{A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") and if it fails, an it would choose the first outcome in the \code{markov$prob} data frame.}
+\item{markov_models}{A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.}
 
-\item{markov}{A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.}
+\item{outcome}{A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") and if it fails, an it would choose the first outcome in the \code{markov$prob} data frame.}
 }
 \value{
 a data frame with the following columns:
@@ -63,7 +63,12 @@ markov_disease <- mldp_disease_markov(predictors_disease, 5, qbins = seq(0, 1, b
 
 new_data <- load_disease_example_data(N = 1e3, num_age_groups = 3)
 
-scores_disease <- mldp_predict_multi_age(new_data, predictors_disease, markov_disease, c("disease", "disease_death"))
+scores_disease <- mldp_predict_multi_age(
+    new_data,
+    predictors_disease,
+    markov_disease,
+    c("disease", "disease_death")
+)
 
 head(scores)
 

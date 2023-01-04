@@ -83,7 +83,7 @@ Each data frame has 86 columns. The features include sex and common labs, quanti
 }
 
 \examples{
-\donttest{
+\dontrun{
 mldp_download_example_data(file.path(getwd(), "examples"))
 longevity_data <- mldp_load_data("longevity", file.path(getwd(), "examples"))
 diabetes_data <- mldp_load_data("diabetes", file.path(getwd(), "examples"))

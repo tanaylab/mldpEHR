@@ -87,7 +87,7 @@ download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 *
 #' @return Nothing
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' mldp_download_example_data()
 #' }
 #'
@@ -129,7 +129,7 @@ mldp_download_example_data <- function(output_dir = file.path(getwd(), "examples
 #' @return an MldpEHR object
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' mldp_download_example_data(file.path(getwd(), "examples"))
 #' longevity_data <- mldp_load_data("longevity", file.path(getwd(), "examples"))
 #' diabetes_data <- mldp_load_data("diabetes", file.path(getwd(), "examples"))

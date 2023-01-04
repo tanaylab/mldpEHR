@@ -91,7 +91,7 @@ Each data frame has 86 columns. The features include sex and common labs, quanti
 }
 
 \examples{
-\donttest{
+\dontrun{
 mldp_download_example_data()
 }
 

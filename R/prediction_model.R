@@ -369,9 +369,9 @@ mldp_cv_train_outcome <- function(target,
 #'
 #' @return a list with 3 elements:
 #' \itemize{
-#' \item{summary: }{a data frame containing for each feature the mean absolute shaply value for the feature across all training data.}
+#' \item{summary: }{a data frame containing for each feature the mean absolute Shapley value for the feature across all training data.}
 #' \item{shap_by_patient: }{a data frame data frame containing for each patient and feature the feature value and mean shap value across all training folds.}
-#' \item{shap_by_fold: }{similar to shap_by_patient, but for each fold seperately.}
+#' \item{shap_by_fold: }{similar to shap_by_patient, but for each fold separately.}
 #' }
 #'
 #' @examples

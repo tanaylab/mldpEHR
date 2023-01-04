@@ -8,7 +8,7 @@ mldp_disease_expected(index, population_count, edp)
 }
 \arguments{
 \item{index}{\itemize{
-\item index of entry in the empirical disase prob of the current age to start propogation from
+\item index of entry in the empirical disease prob of the current age to start propagation from
 }}
 
 \item{population_count}{\itemize{

@@ -263,7 +263,7 @@ disease_local_model_by_sex <- function(local_model, qbins) {
 #' @description This method computes the probability for future disease according to the availablitiy of data
 #' by basically computing a stitched markov model
 #' as score availability is not unbiased (patients with less measurements tend to be healthier),
-#' the probaility will be computed seperately for patients with / without score
+#' the probaility will be computed separately for patients with / without score
 #' we will define the following modes:
 #' - 0 has required conditions at young age and known score / outcome at older age
 #' - 1 has required conditions at young age and no restrictions at older age
@@ -332,7 +332,7 @@ mldp_disease_empirical_prob_for_disease <- function(population, steps, required_
 
 
 #' calculate expected number of disease patients
-#' @param index - index of entry in the empirical disase prob of the current age to start propogation from
+#' @param index - index of entry in the empirical disease prob of the current age to start propagation from
 #' @param population_count - data.frame containing age, sex, and the number of patients available
 #' @param edp - empirical disease prob, output of mldp_disease_empirical_prob_for_disease
 mldp_disease_expected <- function(index, population_count, edp) {
