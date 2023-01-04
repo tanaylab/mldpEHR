@@ -1,0 +1,186 @@
+---
+title: "mldpEHR"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>"
+)
+```
+
+```{r setup}
+library(tidyverse)
+library(glue)
+library(mldpEHR)
+```
+
+# Building age-dependent longevity and disease models
+
+mldpEHR is a package for training age-dependent multivariate prediction models for longevity and disease. In this vignette we will start by describing the method for training a probablistic model for reaching the age of 85, and then show another example of training a model for predicting the risk of developing a disease like diabetes.
+
+## The problem 
+
+The problem we are trying to solve is to predict the probability of reaching the age of 85 for a given patient. In a perfect dataset we would have a followup of every patient from birth until the age of 85, but in reality we have a much limited follow-up time. For example, if we have a follow-up of 5 years, we can only predict the probability of reaching the age of 85 for patients who are 80 and above, as we don't know for the younger patients if they will reach the age of 85.
+
+## The solution
+
+### Stitching models together
+
+The MLDP-EHR method (Markovian Lifelong Mortality and Disease Predisposition Models for Electronic Health Records) uses the observation that even though we do not follow patients for their entire life, we can use the fact that patients span a wide range of ages to "stitch" together models for different ages. How can we do that? 
+
+Say, for example, we have a follow-up of 5 years. We can start by training a model for patients who are 80, predicting their chance to reach the age of 85 using all the features available in the dataset. We now have a "score" for each patient in this age, predicting his probability of reaching the age of 85, even if we don't know if he will actually reach the age of 85. We can now pick a subset of this patients that have a good score (say, the top 5%), and if we have data on these patients in the younger age (e.g. at age 75), we can train a model that would use their features when they are young to predict the chance that they will *get a good score* when they are older. Now we have another model, predicting the chance that a patient will get a good score at age 75 and we can repeat the same process of picking the top 5% of patients with a good score and train a model for patients at age 65, and so on.
+
+This way we can have a model even for patients with a very young age, as long as we have enough data on patients from older ages that can be used to "stitch" the models together.
+
+### Computing composite probability
+
+Now we have a set of models, each predicting the chance that a patient will get a good score at a given age, how can we combine them to get what we were after - the chance that a patient will reach the age of 85? 
+
+For that, we cam assemble the models into a Markov chain. We do that by binning the score for each age (using quantiles), and building a Markov model where the state of the chain is the age and score bin of the patient, and the transition probabilities are the probability that a patient will go from the bin to any other bin in the next age. We can then sum up the probabilities of reaching the age of 85 for all the states in the chain, and that will be the probability that a patient will reach the age of 85.
+
+## The data
+
+We will start by showing how to to use the method described above to predict the probability of reaching the age of 85. The data we will use was simulated as a EHR dataset of 2M patients with a follow-up of 5 years. 
+
+We will start by downloading it:
+
+```{r}
+longevity_data <- mldpEHR::mldp_load_data("longevity")
+longevity_data
+```
+
+The data is an MldpEHR object, has a slot called "patients" which is a list of data frames for each age, containing age, sex, the outcome (whether the patient died, and if so - the age at death) and the follow-up time: 
+
+```{r}
+length(longevity_data@patients)
+head(longevity_data@patients[["80"]])
+```
+
+In addition, it has a slot called "features" which is a list of data frames for each age, containing the features for each patient in the age:
+
+```{r}
+length(longevity_data@features)
+head(longevity_data@features[["80"]])
+```
+
+## Training the models
+
+As we saw above, we can train a model prediction patient survival up to the age of 85 for the older age, and then use this model to stitch together models for the younger ages. For each we need to provide the sex, age at death and the follow-up time (which is usually the time until the end of the database), and the features we want to use.
+
+Additionally, we need to provide the number of survival years (5 in our case, as we want to predict survival up to age 85), the number of folds for cross-validation of each model, and any expression for filtering of the patients. For example, here we will only use patients that have a complete blood count (CBC) test panel.
+
+Note that the training can take a while (around 30 minutes).
+
+```{r}
+longevity <- mldp_mortality_multi_age_predictors(longevity_data@patients, longevity_data@features, survival_years = 5, nfolds = 5, required_conditions = "has_cbc")
+```
+
+## Investigating the models features
+
+We can now investigate the features that were used in the models using SHAP (SHapley Additive exPlanations) values. For example, we can look at the features at age 80 (the oldest age we have data for):
+
+```{r, fig.width=10, fig.height=5}
+longevity_shap <- mldp_model_features(longevity[["80"]])
+
+head(longevity_shap$shap_by_patient)
+
+mldp_plot_shap(longevity_shap, n_features = 5)
+```
+
+
+## Computing Markovian probability model
+
+Given the models we trained, we can now compute the Markovian probability model. We can do that using the function `mldp_mortality_markov`:
+
+```{r}
+longevity_markov <- mldp_mortality_markov(longevity, survival_years = 5, qbins = seq(0, 1, by = 0.1), required_conditions = glue::glue("time >= as.Date('2005-01-01') & time < as.Date('2016-01-01')"))
+```
+
+The function takes the models we trained, the number of survival years, the quantiles to use for binning the scores, and any expression for filtering of the patients.
+
+The result is a list that contains the Markov model (`models`) and the final probability of reaching the age of 85 (`prob`):
+
+```{r}
+head(longevity_markov$probs)
+head(longevity_markov$models[[1]])
+```
+
+
+We can now look at the probabilites for the different age groups: 
+
+```{r, fig.width=15, fig.height=5}
+longevity_markov$prob %>%
+    mutate(sex = factor(c("male", "female")[sex])) %>%
+    ggplot(aes(x = sbin, y = alive, colour = sex, group = sex)) +
+    geom_point() +
+    geom_line() +
+    ylab("p(survival up to age 85)") +
+    xlab("score bin") +
+    scale_color_manual(name = "", values = c("male" = "blue", "female" = "red")) +
+    facet_wrap(~age, nrow = 1) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## Predicting the probability for diabetes
+
+Similar to the longevity example, we can use the method described above to predict the probability of developing diabetes. The data we will use was simulated as a EHR dataset of 2M patients with a follow-up of 5 years, and it can be downloaded using:
+
+```{r}
+diabetes_data <- mldpEHR::mldp_load_data("diabetes")
+diabetes_data
+```
+
+This dataset is very similar to the longevity one, except for an additional column named `disease` which holds the age at which the patient developed diabetes and `NA` if the patient did not develop diabetes.
+
+```{r}
+head(diabetes_data@patients$`80`)
+```
+
+### Training the models 
+
+Similar to the longevity example, we start by training the models:
+
+```{r}
+diabetes <- mldp_disease_multi_age_predictors(diabetes_data@patients, diabetes_data@features, target_years = 5, nfolds = 5, required_conditions = "has_cbc")
+```
+
+Note that instead of `survival_years` we use `target_years` which is the number of years to predict the onset of the disease after the last age. 
+
+### Investigating the models features
+
+We can now investigate the features that were used in the models using SHAP (SHapley Additive exPlanations) values. For example, we can look at the features at age 80 (the oldest age we have data for):
+
+```{r, fig.width=10, fig.height=5}
+diabetes_shap <- mldp_model_features(diabetes[["80"]])
+
+head(diabetes_shap$shap_by_patient)
+
+mldp_plot_shap(diabetes_shap, n_features = 5)
+```
+
+### Computing Markovian probability model
+
+Given the models we trained, we can now compute the Markovian probability model. We can do that using the function `mldp_disease_markov`:
+
+```{r}
+diabetes_markov <- mldp_disease_markov(diabetes, target_years = 5, qbins = seq(0, 1, by = 0.1), required_conditions = glue::glue("time >= as.Date('2005-01-01') & time < as.Date('2016-01-01')"))
+```
+
+We can now look at the probabilites for the different age groups: 
+
+```{r, fig.width=15, fig.height=5}
+markov$prob %>%
+    mutate(sex = factor(c("male", "female")[sex])) %>%
+    ggplot(aes(x = sbin, y = disease + disease_death, colour = sex, group = sex)) +
+    geom_point() +
+    geom_line() +
+    ylab("p(disease)") +
+    xlab("score bin") +
+    scale_color_manual(name = "", values = c("male" = "blue", "female" = "red")) +
+    facet_wrap(~age, nrow = 1) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
