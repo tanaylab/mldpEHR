@@ -26,17 +26,17 @@ download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 *
 #' A dataset for patient survival.
 #'
 #' This dataset is a list of 9 data frames, representing the population of patients for
-#' each age starting at 80 and going down to 40 at 5 year interavls. For each patients,
+#' each age starting at 80 and going down to 40 at 5 year interavls. For each patient,
 #' the age at death is provided.
 #' \cr
 #'
-#' Each dataframe has the following 5 columns:
+#' Each data frame has the following 5 columns:
 #' \itemize{
 #'   \item{id: }{unique patient id}
 #'   \item{age: }{age of patient}
 #'   \item{sex: }{1 for male, 2 for female}
 #'   \item{death: }{age at death, NA if patient doesn't die by end of followup}
-#'   \item{has_cbc: }{binary indicating if patient has available data}
+#'   \item{has_cbc: }{binary indicating if patient has required feature data}
 #'   \item{followup: }{available followup time in years}
 #' }
 #' \cr
@@ -54,7 +54,7 @@ download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 *
 #' A dataset for patient disease outcome.
 #'
 #' This dataset is a list of 9 data frames, representing the population of patients for
-#' each age starting at 80 and going down to 40 at 5 year interavls. For each patients,
+#' each age starting at 80 and going down to 40 at 5 year interavls. For each patient,
 #' the age at disease is provided.
 #' \cr
 #' Each dataframe with the following 5 columns:
@@ -97,7 +97,7 @@ download_dataset <- function(output_dir, dataset, url, overwrite, timeout = 60 *
 #'
 #' @export
 mldp_download_example_data <- function(output_dir = file.path(getwd(), "examples"), datasets = c("longevity", "diabetes"), overwrite = FALSE, timeout = 60 * 60 * 2) {
-    datasets <- list(
+    datasets_opt <- list(
         "longevity" = "https://mldp-ehr.s3.eu-west-1.amazonaws.com/example",
         "diabetes" = "https://mldp-ehr.s3.eu-west-1.amazonaws.com/example"
     )
@@ -109,10 +109,10 @@ mldp_download_example_data <- function(output_dir = file.path(getwd(), "examples
 
 
     for (dataset in names(datasets)) {
-        if (!(dataset %in% names(datasets))) {
-            cli::cli_abort("Dataset must be one of {.field {names(datasets)}}, not {.field {dataset}}")
+        if (!(dataset %in% names(datasets_opt))) {
+            cli::cli_abort("Dataset must be one of {.field {names(datasets_opt)}}, not {.field {dataset}}")
         }
-        download_dataset(output_dir, dataset, datasets[[dataset]], overwrite)
+        download_dataset(output_dir, dataset, datasets_opt[[dataset]], overwrite)
     }
 
     cli::cli_alert_success("Successfully downloaded data to {.file {output_dir}}. Use {.code mldpEHR::load_data()} to load the data.")

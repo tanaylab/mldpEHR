@@ -23,7 +23,7 @@ mldp_mortality_markov(
 \value{
 a list of with the following members:
 \itemize{
-\item{prob: }{a data frame containing the probability to survive ("alive") or die ("death") before the oldest age group + survival_years for each age, gender and score bin (quantile of score).}
+\item{prob: }{a data frame containing the probability to survive ("alive") or die ("death") before the oldest age group + survival_years for each age, sex and score bin (quantile of score).}
 \item{models: }{a list of matrices containing the probability for each quantile(score) bin to reach
 each of the quantile(score) bins of the next model by age.}
 }

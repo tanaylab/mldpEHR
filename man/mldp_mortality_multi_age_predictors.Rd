@@ -25,15 +25,15 @@ mldp_mortality_multi_age_predictors(
 \item{age: }{age of patient. All patients in the data.frame must be the same age}
 \item{sex: }{1 for male, 2 for female}
 \item{death: }{age at death, NA if patient doesn't die by end of followup}
-\item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease}
-\item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
+\item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease. This parameter is required in disease model training.}
+\item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death or disease)}
 }\cr
 
 The data frame can contain any additional columns required for patient filtering in the future.\cr
 
 Note that every age group except the last one must have at least two patients per sex which exist in the next age group. This is to ensure that the model can be trained.}
 
-\item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.}
+\item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns. All columns provided will be used as features in the model. No internal feature scaling or selection is performed.}
 
 \item{survival_years}{the number of years to predict mortality for (after the oldest age). e.g. 5 for predicting mortality up to age 85 if the oldest age is 80.}
 
@@ -41,7 +41,7 @@ Note that every age group except the last one must have at least two patients pe
 
 \item{required_conditions}{a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link[dplyr]{filter}} for more details.}
 
-\item{q_thresh}{quantile of the predicted score to use for the next age group. Default is 0.05, which means the top 5\% of the predicted score will be used for the next age group.}
+\item{q_thresh}{quantile of the predicted score to be considered as negative for death, used as target in the younger age group. Default is 0.05, which means the bottom 5\% of the predicted score will be used to define a healthy state (mortality classification of 0) for the next age group.}
 
 \item{xgboost_params}{parameters used for xgboost model training}
 
@@ -60,11 +60,11 @@ with the following members:
 (each id was tested once in the fold it was not used for training)}
 \item{xgboost_params: }{the set of parameters used in xgboost}
 \item{nrounds: }{number of training iterations conducted}
-\item{age: }{the age group of the model}
+\item{age: }{the age of patients used in the model}
 }
 }
 \description{
-Given a set of patients and features, builds a set of models for predicting mortality up to \code{survival_years} after the oldest age (e.g. 85) by stitching together models for each age group. Each model is build using a cross validation \code{xgboost} k-fold classification model, where the number of folds is determined by the \code{nfolds} parameter. Stitching is done by first modeling the oldest group, and then taking the top \code{q_thresh} quantile of the predicted score for each patient in the next younger group and building a model to classify them. See more in the vignette.
+Given a set of patients and features, builds a set of models for predicting mortality up to \code{survival_years} after the oldest age (e.g. 85) by stitching together models for each age group. Each model is trained using a cross validation \code{xgboost} k-fold classification model, where the number of folds is determined by the \code{nfolds} parameter. Stitching is done by first modeling the oldest group, and then taking the bottom \code{q_thresh} quantile of the predicted score for each patient, assigning them to the 'healthiest' group of patients that are not expected to die by the oldest age, and building a classification model for the younger group. See more in the vignette.
 }
 \examples{
 
