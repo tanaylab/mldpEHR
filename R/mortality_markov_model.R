@@ -12,7 +12,7 @@
 #'
 #' @return a list of with the following members:
 #' \itemize{
-#' \item{prob: }{a data frame containing the probability to survive ("alive") or die ("death") before the oldest age group + survival_years for each age, gender and score bin (quantile of score).}
+#' \item{prob: }{a data frame containing the probability to survive ("alive") or die ("death") before the oldest age group + survival_years for each age, sex and score bin (quantile of score).}
 #' \item{models: }{a list of matrices containing the probability for each quantile(score) bin to reach
 #' each of the quantile(score) bins of the next model by age.}
 #' }
@@ -85,25 +85,12 @@ mldp_mortality_markov <- function(models, survival_years, qbins = seq(0, 1, by =
 }
 
 
-#' Build an Markov probability model from multi-age prediction models
+#' Build a Markov probability model from multi-age prediction models
 #'
 #' @param markov - the markov model computed for the next age (older). the states in this age will be
-#' mapped to the states in this markov layer
-#' @param model - prediction model (output of build_cross_validation_time_stitch_classification_models)
-#' @param step - time between prediction models
-#' @param qbins - quantile bin size of prediction score for which the markov model will define a state
-#' @param required_conditions - any filter to apply to the patients to filter out from model computation,
-#' for example limiting the time window
-#' @param min_obs_for_estimate - minimum of observations required to compute probability per sex/sbin.
-#' If minimum is not available, probability will be compuated using all data.
-#' @return a markov model, a list with the following members:
-#' - model - matrix containing the probability for each quantile(score) bin to reach each of
-#' the target_classes provided in the oldest model.
-#' - local.model - data.frame containing the probability for each quantile(score) bin to reach
-#' each of the quantile(score) bins of the next model by age.
-#' - qbins -  bins
-#' - target - data frame containing the target bin for this age model (to be used as outcome for
-#' the younger age model)
+#' mapped to the states in this markov layer.
+#' @inheritParams mortality_markov_model_for_outcome_model
+#' @inheritSection mortality_markov_model_for_outcome_model return
 #' @noRd
 mortality_markov_model_for_stitch_model <- function(markov, model, step, qbins, required_conditions, min_obs_for_estimate = 10) {
     m <- mortality_set_sbin(model$test, qbins)
@@ -146,6 +133,23 @@ mortality_markov_model_for_stitch_model <- function(markov, model, step, qbins, 
     ))
 }
 
+#' Build a Markov probability model from multi-age prediction models
+#'
+#' @param model - a prediction model (output of \code{mldp_mortality_multi_age_predictors}).
+#' @param step - time between prediction models
+#' @param qbins - quantile bin size of prediction score for which the markov model will define a state
+#' @param required_conditions - any filter to apply to the patients to filter out from model computation,
+#' for example limiting the time window
+#' @param min_obs_for_estimate - minimum of observations required to compute probability per sex/sbin.
+#' If minimum is not available, probability will be compuated using all data.
+#' @return a list of with the following members:
+#' \itemize{
+#' \item{model: }{a matrix containing the probability for each quantile(score) bin to reach each of the target_classes provided in the oldest model.}
+#' \item{local_model: }{a data.frame containing the probability for each quantile(score) bin to reach each of the quantile(score) bins of the next model by age.}
+#' \item{qbins: }{a vector depicting the quantile bins used to compute probabilities.}
+#' \item{target: }{a data.frame containing the target bin for this age model (to be used as outcome fo the younger age model).}
+#' }
+#' @noRd
 mortality_markov_model_for_outcome_model <- function(model, step, qbins, required_conditions, min_obs_for_estimate = 10) {
     m <- mortality_set_sbin(model$test, qbins)
 

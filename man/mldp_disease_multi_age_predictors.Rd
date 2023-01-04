@@ -24,15 +24,15 @@ mldp_disease_multi_age_predictors(
 \item{age: }{age of patient. All patients in the data.frame must be the same age}
 \item{sex: }{1 for male, 2 for female}
 \item{death: }{age at death, NA if patient doesn't die by end of followup}
-\item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease}
-\item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
+\item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease. This parameter is required in disease model training.}
+\item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death or disease)}
 }\cr
 
 The data frame can contain any additional columns required for patient filtering in the future.\cr
 
 Note that every age group except the last one must have at least two patients per sex which exist in the next age group. This is to ensure that the model can be trained.}
 
-\item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.}
+\item{features}{list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns. All columns provided will be used as features in the model. No internal feature scaling or selection is performed.}
 
 \item{target_years}{the number of years to predict the disease for (after the oldest age). e.g. 5 for predicting the onset of the disease up to age 85 if the oldest age is 80.}
 
@@ -59,7 +59,7 @@ with the following members:
 \item{xgboost_params: }{the set of parameters used in xgboost}
 \item{nrounds: }{number of training iterations conducted}
 \item{score2quantile: }{a list per set of functions that convert the predicted score to quantile (ecdf)}
-\item{age: }{the age group of the model}
+\item{age: }{the age of patients used in the model}
 }
 }
 \description{
