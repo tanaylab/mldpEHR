@@ -19,8 +19,8 @@ setClass(
 #'   \item{age: }{age of patient. All patients in the data.frame must be the same age}
 #'   \item{sex: }{1 for male, 2 for female}
 #'   \item{death: }{age at death, NA if patient doesn't die by end of followup}
-#'   \item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease}
-#'   \item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death)}
+#'   \item{disease (optional): }{the age at which the patient developed the disease and NA if the patient never developed the disease. This parameter is required in disease model training.}
+#'   \item{followup: }{available followup time (in years) for this patient - time until end of database or until patient exists the system (not due to death or disease)}
 #' }\cr
 #'
 #'
@@ -28,8 +28,8 @@ setClass(
 #'
 #' Note that every age group except the last one must have at least two patients per sex which exist in the next age group. This is to ensure that the model can be trained.
 #'
-#' @param features list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns.
-#' @param age_groups (optional) labels for the age groups. If the \code{patients} list is named, the age_groups will be the names of the lists.
+#' @param features list of data.frames of all the features for the patients in the system going back in time. For example the first data.frame represents age 80, next is 75 and so forth. Each feature data.frame must contain an id column that matches the id column in the patient data.frame. The feature data.frame can contain any additional feature columns. All columns provided will be used as features in the model. No internal feature scaling or selection is performed.
+#' @param age_groups (optional) labels for the age groups. If the \code{patients} list is named, the age_groups will be the names of the list elements.
 #' @param disease validate that the disease column exists and is correct
 #'
 #' @return a MldpEHR object
@@ -114,6 +114,7 @@ MldpEHR <- function(patients, features, age_groups = NULL, disease = FALSE) {
         }
     })
 
+    # make sure that ids in features data frames are also in patients data frame
     purrr::walk2(patients, features, function(x, y) {
         if (!all(y$id %in% x$id)) {
             cli::cli_abort("All ids in {.field features} must be in {.field patients}")
@@ -127,6 +128,7 @@ MldpEHR <- function(patients, features, age_groups = NULL, disease = FALSE) {
         }
     })
 
+    #check that patients and features list names match
     if (!is.null(names(patients))) {
         age_groups <- names(patients)
         if (!is.null(names(features))) {
@@ -160,7 +162,7 @@ MldpEHR <- function(patients, features, age_groups = NULL, disease = FALSE) {
         }
     }
 
-    # make sure that each age group as only a single age
+    # make sure that each age group has only a single age
     purrr::walk(patients, function(x) {
         if (length(unique(x$age)) > 1) {
             cli::cli_abort("Each age group must have only a single age. Age group {.field {age_groups[i]}} does not meet this requirement")
@@ -172,6 +174,7 @@ MldpEHR <- function(patients, features, age_groups = NULL, disease = FALSE) {
         cli::cli_abort("Age groups must be decreasing monotonically")
     }
 
+    # if data is used in disease prediciton model then make sure that all patients have a disease field indicating the age at time of disease.
     if (disease) {
         purrr::walk(patients, function(x) {
             if (!"disease" %in% colnames(x)) {

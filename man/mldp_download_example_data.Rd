@@ -31,17 +31,17 @@ Download example data. See description of the datasets below.
 A dataset for patient survival.
 
 This dataset is a list of 9 data frames, representing the population of patients for
-each age starting at 80 and going down to 40 at 5 year interavls. For each patients,
+each age starting at 80 and going down to 40 at 5 year interavls. For each patient,
 the age at death is provided.
 \cr
 
-Each dataframe has the following 5 columns:
+Each data frame has the following 5 columns:
 \itemize{
 \item{id: }{unique patient id}
 \item{age: }{age of patient}
 \item{sex: }{1 for male, 2 for female}
 \item{death: }{age at death, NA if patient doesn't die by end of followup}
-\item{has_cbc: }{binary indicating if patient has available data}
+\item{has_cbc: }{binary indicating if patient has required feature data}
 \item{followup: }{available followup time in years}
 }
 \cr
@@ -63,7 +63,7 @@ Each data frame has 86 columns. The features include sex and common labs, quanti
 A dataset for patient disease outcome.
 
 This dataset is a list of 9 data frames, representing the population of patients for
-each age starting at 80 and going down to 40 at 5 year interavls. For each patients,
+each age starting at 80 and going down to 40 at 5 year interavls. For each patient,
 the age at disease is provided.
 \cr
 Each dataframe with the following 5 columns:

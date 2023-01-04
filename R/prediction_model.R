@@ -1,13 +1,13 @@
-# this file contains methods for building and analyzing prediction model
+# this file contains methods for building and analyzing prediction models
 
 #' Build a set of mldpEHR prediction models for mortality
 #'
-#' @description Given a set of patients and features, builds a set of models for predicting mortality up to \code{survival_years} after the oldest age (e.g. 85) by stitching together models for each age group. Each model is build using a cross validation \code{xgboost} k-fold classification model, where the number of folds is determined by the \code{nfolds} parameter. Stitching is done by first modeling the oldest group, and then taking the top \code{q_thresh} quantile of the predicted score for each patient in the next younger group and building a model to classify them. See more in the vignette.
+#' @description Given a set of patients and features, builds a set of models for predicting mortality up to \code{survival_years} after the oldest age (e.g. 85) by stitching together models for each age group. Each model is trained using a cross validation \code{xgboost} k-fold classification model, where the number of folds is determined by the \code{nfolds} parameter. Stitching is done by first modeling the oldest group, and then taking the bottom \code{q_thresh} quantile of the predicted score for each patient, assigning them to the 'healthiest' group of patients that are not expected to die by the oldest age, and building a classification model for the younger group. See more in the vignette.
 #'
 #' @param survival_years the number of years to predict mortality for (after the oldest age). e.g. 5 for predicting mortality up to age 85 if the oldest age is 80.
 #' @param nfolds number of folds used for k-fold cross validation (at least 2)
 #' @param required_conditions a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing data or other conditions. See \code{\link[dplyr]{filter}} for more details.
-#' @param q_thresh quantile of the predicted score to use for the next age group. Default is 0.05, which means the top 5% of the predicted score will be used for the next age group.
+#' @param q_thresh quantile of the predicted score to be considered as negative for death, used as target in the younger age group. Default is 0.05, which means the bottom 5% of the predicted score will be used to define a healthy state (mortality classification of 0) for the next age group.
 #' @param xgboost_params parameters used for xgboost model training
 #' @param nrounds number of training rounds
 #' @param nthread number of threads to use for training. Default is all available threads.
@@ -21,7 +21,7 @@
 #' (each id was tested once in the fold it was not used for training)}
 #' \item{xgboost_params: }{the set of parameters used in xgboost}
 #' \item{nrounds: }{number of training iterations conducted}
-#' \item{age: }{the age group of the model}
+#' \item{age: }{the age of patients used in the model}
 #' }
 #'
 #'
@@ -71,7 +71,15 @@ mldp_mortality_multi_age_predictors <- function(patients,
     pop <- purrr::map(seq_along(mldp@patients), ~ mldp_compute_target_mortality(mldp@patients[[.x]], steps[.x], .x == 1)) %>%
         purrr::set_names(names(mldp@patients))
 
-    predictors[[1]] <- mldp_cv_train_outcome(pop[[1]], mldp@features[[1]], nfolds, required_conditions, nthread = nthread)
+    predictors[[1]] <- mldp_cv_train_outcome(
+        pop[[1]], 
+        mldp@features[[1]], 
+        nfolds, 
+        required_conditions=required_conditions, 
+        xgboost_params=xgboost_params, 
+        nrounds=nrounds, 
+        nthread = nthread
+    )
     predictors[[1]]$age <- pop[[1]]$age[1]
     i <- 2
     while (i <= length(pop)) {
@@ -104,8 +112,8 @@ mldp_mortality_multi_age_predictors <- function(patients,
             mldp@features[[i]],
             nfolds,
             required_conditions = required_conditions,
-            xgboost_params = predictors[[i - 1]]$xgboost_params,
-            nrounds = predictors[[i - 1]]$nrounds,
+            xgboost_params = xgboost_params,
+            nrounds = nrounds,
             nthread = nthread
         )
 
@@ -167,10 +175,10 @@ mldp_disease_multi_age_predictors <- function(patients,
 
     predictors <- list()
 
-    pop <- purrr::map(1:length(patients), ~ mldp_compute_target_disease(mldp@patients[[.x]], steps[.x], .x == 1)) %>%
-        purrr::set_names(names(patients))
+    pop <- purrr::map(seq_along(mldp@patients), ~ mldp_compute_target_disease(mldp@patients[[.x]], steps[.x], .x == 1)) %>%
+        purrr::set_names(names(mldp@patients))
     empirical_disease_prob <- mldp_disease_empirical_prob_for_disease(pop, steps, required_conditions)
-    predictors[[1]] <- mldp_cv_train_outcome(pop[[1]], mldp@features[[1]], nfolds, required_conditions, nthread = nthread)
+    predictors[[1]] <- mldp_cv_train_outcome(pop[[1]], mldp@features[[1]], nfolds, required_conditions, xgboost_params=xgboost_params, nrounds=nrounds, nthread = nthread)
     predictors[[1]]$age <- pop[[1]]$age[1]
 
     i <- 2
@@ -215,8 +223,8 @@ mldp_disease_multi_age_predictors <- function(patients,
             mldp@features[[i]],
             nfolds,
             required_conditions = required_conditions,
-            xgboost_params = predictors[[i - 1]]$xgboost_params,
-            nrounds = predictors[[i - 1]]$nrounds,
+            xgboost_params = xgboost_params,
+            nrounds = nrounds,
             nthread = nthread
         )
         predictors[[i]]$age <- pop[[i]]$age[1]
@@ -237,6 +245,7 @@ mldp_disease_multi_age_predictors <- function(patients,
 #' @param features a data.frame containing patient id along with all other features to be used in
 #' classification model
 #' @param folds number of cross-validation folds
+#' @param required_conditions a string with an expression for any filter to apply to the patients to filter out from training or testing. Can be used to filter out patients with missing 
 #' @param xgboost_params parameters used for xgboost model training
 #' @param nrounds number of training rounds
 #' @param nthread number of threads to use for training. Default is all available threads.
@@ -251,9 +260,8 @@ mldp_disease_multi_age_predictors <- function(patients,
 #' \item{nrounds: }{number of training iterations conducted}
 #' }
 #'
-#' @inheritParams mldp_disease_multi_age_predictors
-#'
 #' @noRd
+
 mldp_cv_train_outcome <- function(target,
                                   features,
                                   folds,
