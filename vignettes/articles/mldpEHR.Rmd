@@ -46,6 +46,7 @@ We will start by showing how to to use the method described above to predict the
 We will start by downloading it:
 
 ```{r}
+mldp_download_example_data(file.path(getwd(), "examples"))
 longevity_data <- mldpEHR::mldp_load_data("longevity")
 longevity_data
 ```
@@ -171,7 +172,7 @@ diabetes_markov <- mldp_disease_markov(diabetes, target_years = 5, qbins = seq(0
 We can now look at the probabilites for the different age groups: 
 
 ```{r, fig.width=15, fig.height=5}
-markov$prob %>%
+diabetes_markov$prob %>%
     mutate(sex = factor(c("male", "female")[sex])) %>%
     ggplot(aes(x = sbin, y = disease + disease_death, colour = sex, group = sex)) +
     geom_point() +

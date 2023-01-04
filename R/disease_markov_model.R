@@ -11,14 +11,13 @@
 #'
 #' @return a list of with the following members:
 #' \itemize{
-#' \item{prob: }{a data frame containing the life-long probability to get the disease ("disease"), die ("death") die with the disease ("death_disease"), or not get the disease and live ("healthy") for each age, gender and score bin (quantile of score).}#'
+#' \item{prob: }{a data frame containing the life-long probability to get the disease ("disease"), die ("death") die with the disease ("death_disease"), or not get the disease and live ("healthy") for each age, gender and score bin (quantile of score).}
 #' \item{models: }{a list of matrices containing the probability for each quantile(score) bin to reach
 #' each of the quantile(score) bins of the next model by age.}
 #' }
 #'
 #'
 #' @examples
-#'
 #'
 #' # Load a small example data
 #' disease_data <- load_disease_example_data(N = 100, num_age_groups = 3)

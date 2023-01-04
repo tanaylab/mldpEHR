@@ -14,13 +14,15 @@
 #' @return a list of predictors, for each age. Each predictor is a list
 #' with the following members:
 #' \itemize{
-#' \item{model: }{a list of xgboost models, for each fold}
+#' \item{model_cv: }{a list of xgboost models, for each fold}
+#' \item{model: }{a xgboost model on the full dataset}
 #' \item{train: }{data.frame containing the patients id, fold, target class and predicted value in training}
 #' (each id was used in nfolds-1 for training)
 #' \item{test: }{data.frame containing the patients id, fold, target class and predicted value in testing
 #' (each id was tested once in the fold it was not used for training)}
 #' \item{xgboost_params: }{the set of parameters used in xgboost}
 #' \item{nrounds: }{number of training iterations conducted}
+#' \item{score2quantile: }{a list per set of functions that convert the predicted score to quantile (ecdf)}
 #' \item{age: }{the age group of the model}
 #' }
 #'
@@ -142,6 +144,7 @@ mldp_mortality_multi_age_predictors <- function(patients,
 #' mldp_plot_multi_age_predictors_ecdf(predictors)
 #'
 #' @inheritParams mldp_mortality_multi_age_predictors
+#' @inherit mldp_mortality_multi_age_predictors return
 #' @export
 mldp_disease_multi_age_predictors <- function(patients,
                                               features,
@@ -242,13 +245,15 @@ mldp_disease_multi_age_predictors <- function(patients,
 #' @param nthread number of threads to use for training. Default is all available threads.
 #' @return a predictor, a list with the following elements
 #' \itemize{
-#' \item{model: }{a list of xgboost models, for each fold}
+#' \item{model_cv: }{a list of xgboost models, for each fold}
+#' \item{model: }{a xboost model on the full dataset}
 #' \item{train: }{data.frame containing the patients id, fold, target class and predicted value in training}
 #' (each id was used in nfolds-1 for training)
 #' \item{test: }{data.frame containing the patients id, fold, target class and predicted value in testing
 #' (each id was tested once in the fold it was not used for training)}
 #' \item{xgboost_params: }{the set of parameters used in xgboost}
 #' \item{nrounds: }{number of training iterations conducted}
+#' \item{score2quantile: }{a list per set of functions that convert the predicted score to quantile (ecdf)}
 #' }
 #'
 #' @inheritParams mldp_disease_multi_age_predictors
@@ -322,14 +327,28 @@ mldp_cv_train_outcome <- function(target,
             mutate(predict = predict(xgb, dtest))
         return(list(model = xgb, test = test, train = train))
     })
-    model <- purrr::map(model_folds, ~ .x$model)
+    model_cv <- purrr::map(model_folds, ~ .x$model)
     train <- purrr::map_df(model_folds, ~ .x$train)
     test <- purrr::map_df(model_folds, ~ .x$test) %>%
         full_join(target_fold, by = c("id", "fold", "target_class")) %>%
         group_by(sex) %>%
         mutate(qpredict = ecdf(predict)(predict)) %>%
         ungroup()
-    return(list(model = model, test = test, train = train, target = target_fold, features = features, xgboost_params = xgboost_params, nrounds = nrounds))
+
+    # train on the full data
+    dtrain <- xgboost::xgb.DMatrix(
+        data = as.matrix(target_features %>% filter(!is.na(target_class)) %>% select(-id, -fold, -target_class)),
+        label = target_features %>% filter(!is.na(target_class)) %>% pull(target_class),
+        missing = NA
+    )
+    model <- xgboost::xgb.train(data = dtrain, nthread = nthread, params = xgboost_params, nrounds = nrounds, verbose = 1)
+
+    score2quantile <- list(
+        "male" = ecdf(test %>% filter(sex == 1) %>% pull(predict)),
+        "female" = ecdf(test %>% filter(sex == 2) %>% pull(predict))
+    )
+
+    return(list(model_cv = model_cv, model = model, test = test, train = train, target = target_fold, features = features, xgboost_params = xgboost_params, nrounds = nrounds, score2quantile = score2quantile))
 }
 
 
@@ -370,12 +389,12 @@ mldp_cv_train_outcome <- function(target,
 #'
 #' @export
 mldp_model_features <- function(predictor) {
-    if (!"model" %in% names(predictor) | !"features" %in% names(predictor)) {
-        cli::cli_abort("predictor must be a list with elements {.field model} and {.field features}")
+    if (!"model_cv" %in% names(predictor) | !"features" %in% names(predictor)) {
+        cli::cli_abort("predictor must be a list with elements {.field model_cv} and {.field features}")
     }
     # going over all folds
-    shap_fold <- plyr::adply(1:length(predictor$model), 1, function(fold) {
-        model_fold <- predictor$model[[fold]]
+    shap_fold <- plyr::adply(1:length(predictor$model_cv), 1, function(fold) {
+        model_fold <- predictor$model_cv[[fold]]
         train_features_fold <- predictor$features %>%
             left_join(predictor$target %>% select(id, fold), by = "id") %>%
             filter(fold != !!fold)
@@ -392,7 +411,7 @@ mldp_model_features <- function(predictor) {
         arrange(id)
 
     # compute average contribution per patient (avereging folds)
-    number_of_contributions_per_patient <- length(predictor$model) - 1
+    number_of_contributions_per_patient <- length(predictor$model_cv) - 1
 
     features <- colnames(predictor$features %>% select(-id))
     shap_id <- shap_fold %>%

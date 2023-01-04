@@ -6,6 +6,7 @@
 
 #' @import dplyr
 #' @importFrom purrr map
+#' @importFrom tibble as_tibble tibble
 #' @importFrom stats ecdf
 #' @importFrom stats predict
 #' @importFrom utils head
