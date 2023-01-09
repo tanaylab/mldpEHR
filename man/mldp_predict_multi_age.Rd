@@ -2,9 +2,23 @@
 % Please edit documentation in R/inference.R
 \name{mldp_predict_multi_age}
 \alias{mldp_predict_multi_age}
+\alias{mldp_score_to_prob}
 \title{Predict scores / probabilities of multi-age models for new data}
 \usage{
-mldp_predict_multi_age(data, predictors, markov_models = NULL, outcome = NULL)
+mldp_predict_multi_age(
+  data,
+  predictors,
+  markov_models = NULL,
+  outcome = NULL,
+  years_before_model = 5
+)
+
+mldp_score_to_prob(
+  scores,
+  markov_models = NULL,
+  outcome = NULL,
+  years_before_model = 5
+)
 }
 \arguments{
 \item{data}{A data frame with "id", "age", "sex" and the same features as the training data, or a MldpEHR object. The "age" field should be in years and the "sex" field should contain
@@ -14,23 +28,29 @@ mldp_predict_multi_age(data, predictors, markov_models = NULL, outcome = NULL)
 
 \item{markov_models}{A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.}
 
-\item{outcome}{A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") and if it fails, an it would choose the first outcome in the \code{markov$prob} data frame.}
+\item{outcome}{A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") type: and if it fails, it chooses the first outcome in the \code{markov$prob} data frame.}
+
+\item{years_before_model}{The number of years to allow the age of the patient to be before the age the model was trained on. e.g., if the model was trained on patients 30-80 years old, and \code{years_before_model} is 5, then patients with age 25-80 would be allowed. Defaults to 5.}
+
+\item{scores}{A data frame with model scores. Output of \code{mldp_predict_multi_age}.}
 }
 \value{
 a data frame with the following columns:
 \itemize{
 \item{id: }{unique patient id}
-\item{age: }{patient age}
+\item{age: }{patient age.}
 \item{sex: }{patient sex}
 \item{model_age: }{age of the model used to predict}
 \item{score: }{the predicted score for the patient}
 \item{quantile: }{the quantile of the score of the patient}
 \item{prob: }{the predicted life-long probability for the patient (in case \code{markov} is provided)}
 }
+
+A data frame with the same columns as \code{scores} and an additional column \code{prob} with the probability of the outcome.
 }
 \description{
 Given a multi-age model, predict scores for new data. If a Markov model
-is provided, life-long probabilities are calculated as well.
+is provided, life-long probabilities are calculated as well. NA would be returned for patients with age outside the range of the model.
 }
 \examples{
 mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
@@ -71,5 +91,23 @@ scores_disease <- mldp_predict_multi_age(
 )
 
 head(scores)
+
+
+mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
+predictors <- mldp_mortality_multi_age_predictors(
+    mortality@patients,
+    mortality@features,
+    survival_years = 5,
+    nfolds = 2,
+    q_thresh = 0.2,
+    nthread = 2 # CRAN allows only 2 cores
+)
+
+new_data <- load_mortality_example_data(N = 1e3, num_age_groups = 3)
+scores <- mldp_predict_multi_age(new_data, predictors)
+
+markov <- mldp_mortality_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
+probs <- mldp_score_to_prob(scores, markov_models = markov, outcome = "death")
+head(probs)
 
 }
