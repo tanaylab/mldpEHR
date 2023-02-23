@@ -46,6 +46,22 @@ Note that every age group except the last one must have at least two patients pe
 
 \item{nrounds}{number of training rounds}
 }
+\value{
+a list of predictors, for each age. Each predictor is a list
+with the following members:
+\itemize{
+\item{model_cv: }{a list of xgboost models, for each fold}
+\item{model: }{a xgboost model on the full dataset}
+\item{train: }{data.frame containing the patients id, fold, target class and predicted value in training}
+(each id was used in nfolds-1 for training)
+\item{test: }{data.frame containing the patients id, fold, target class and predicted value in testing
+(each id was tested once in the fold it was not used for training)}
+\item{xgboost_params: }{the set of parameters used in xgboost}
+\item{nrounds: }{number of training iterations conducted}
+\item{score2quantile: }{a list per set of functions that convert the predicted score to quantile (ecdf)}
+\item{age: }{the age of patients used in the model}
+}
+}
 \description{
 Given a set of patients and features, builds a set of models for predicting the onset of a disease up to \code{target_years} after the oldest age (e.g. 85) by stitching together models for each age group. Each model is build using a cross validation \code{xgboost} k-fold classification model, where the number of folds is determined by the \code{nfolds} parameter. Stitching is done by first modeling the oldest group, and then taking the top \code{q_thresh} quantile of the predicted score for each patient in the next younger group and building a model to classify them. See more in the vignette.
 }

@@ -53,13 +53,15 @@ Note that every age group except the last one must have at least two patients pe
 a list of predictors, for each age. Each predictor is a list
 with the following members:
 \itemize{
-\item{model: }{a list of xgboost models, for each fold}
+\item{model_cv: }{a list of xgboost models, for each fold}
+\item{model: }{a xgboost model on the full dataset}
 \item{train: }{data.frame containing the patients id, fold, target class and predicted value in training}
 (each id was used in nfolds-1 for training)
 \item{test: }{data.frame containing the patients id, fold, target class and predicted value in testing
 (each id was tested once in the fold it was not used for training)}
 \item{xgboost_params: }{the set of parameters used in xgboost}
 \item{nrounds: }{number of training iterations conducted}
+\item{score2quantile: }{a list per set of functions that convert the predicted score to quantile (ecdf)}
 \item{age: }{the age of patients used in the model}
 }
 }

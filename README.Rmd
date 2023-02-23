@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/mldpEHR)](https://CRAN.R-project.org/package=mldpEHR)
 <!-- badges: end -->
 
-`mldpEHR` is a toolkit for building and testing lifelong prediction models for all cause mortality (longevity) and disease.
+`mldpEHR` is a toolkit for building and testing lifelong prediction models for all cause mortality (longevity) and disease. See the [vignette](https://tanaylab.github.io/mldpEHR/articles/mldpEHR.html) for more details.
 
 ## Installation
 
@@ -31,4 +31,3 @@ You can install the development version of mldpEHR from [GitHub](https://github.
 devtools::install_github("tanaylab/mldpEHR")
 ```
 
-## Example

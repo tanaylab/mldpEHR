@@ -128,7 +128,7 @@ MldpEHR <- function(patients, features, age_groups = NULL, disease = FALSE) {
         }
     })
 
-    #check that patients and features list names match
+    # check that patients and features list names match
     if (!is.null(names(patients))) {
         age_groups <- names(patients)
         if (!is.null(names(features))) {
