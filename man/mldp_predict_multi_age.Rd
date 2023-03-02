@@ -24,7 +24,8 @@ mldp_score_to_prob(
 \item{data}{A data frame with "id", "age", "sex" and the same features as the training data, or a MldpEHR object. The "age" field should be in years and the "sex" field should contain
 1 for male and 2 for female.}
 
-\item{predictors}{A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}}
+\item{predictors}{A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}.
+Note that if predictor model is not a single XGBoost model but a list of models (e.g. from cross validation) then average model score will be computed.}
 
 \item{markov_models}{A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.}
 
@@ -64,6 +65,7 @@ predictors <- mldp_mortality_multi_age_predictors(
 )
 
 markov <- mldp_mortality_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
+predictors <- mldp_model_export(predictors)
 
 new_data <- load_mortality_example_data(N = 1e3, num_age_groups = 3)
 scores <- mldp_predict_multi_age(new_data, predictors, markov, "death")

@@ -6,7 +6,8 @@
 #'
 #' @param data A data frame with "id", "age", "sex" and the same features as the training data, or a MldpEHR object. The "age" field should be in years and the "sex" field should contain
 #' 1 for male and 2 for female.
-#' @param predictors A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}
+#' @param predictors A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}.
+#' Note that if predictor model is not a single XGBoost model but a list of models (e.g. from cross validation) then average model score will be computed.
 #' @param markov_models A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.
 #' @param outcome A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") type: and if it fails, it chooses the first outcome in the \code{markov$prob} data frame.
 #' @param years_before_model The number of years to allow the age of the patient to be before the age the model was trained on. e.g., if the model was trained on patients 30-80 years old, and \code{years_before_model} is 5, then patients with age 25-80 would be allowed. Defaults to 5.
@@ -36,6 +37,7 @@
 #' )
 #'
 #' markov <- mldp_mortality_markov(predictors, 5, qbins = seq(0, 1, by = 0.1))
+#' predictors <- mldp_model_export(predictors)
 #'
 #' new_data <- load_mortality_example_data(N = 1e3, num_age_groups = 3)
 #' scores <- mldp_predict_multi_age(new_data, predictors, markov, "death")
@@ -122,7 +124,7 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
         model_age <- as.character(x$model_age[1])
         model <- predictors[[model_age]]
         # make sure that all features are present in the data. If not, add them with NA
-        feature_names <- setdiff(colnames(model$features), "id")
+        feature_names <- setdiff(model$feature_names, "id")
         for (f in feature_names) {
             if (!f %in% colnames(x)) {
                 cli::cli_alert("Feature {.field {f}} is missing in the data at model age {.val {x$model_age[1]}}. Adding it with NA.")
@@ -132,7 +134,11 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
 
         # predict scores
         features_mat <- as.matrix(x[, feature_names])
-        scores <- predict(model$model, features_mat)
+        if (class(model$model) == "xgb.Booster") {
+            scores <- predict(model$model, features_mat)
+        } else { #assuming list of predictors, will compute score for each and then average them out
+            scores <- rowMeans(do.call(cbind, purrr::map(model$model, ~ predict(.x, features_mat))))
+        }
         quantiles <- rep(NA, length(scores))
         quantiles[x$sex == 1] <- model$score2quantile[[1]](scores[x$sex == 1])
         quantiles[x$sex == 2] <- model$score2quantile[[2]](scores[x$sex == 2])
