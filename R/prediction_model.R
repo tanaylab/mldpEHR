@@ -469,7 +469,7 @@ mldp_model_features <- function(predictor) {
 #'     q_thresh = 0.2,
 #'     nthread = 2 # CRAN allows only 2 cores
 #' )
-#' predictors <- mldep_model_export(predictors)
+#' predictors <- mldp_model_export(predictors)
 #'
 #' @export
 mldp_model_export <- function(models) {

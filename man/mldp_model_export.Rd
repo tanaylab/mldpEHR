@@ -34,6 +34,6 @@ predictors <- mldp_mortality_multi_age_predictors(
     q_thresh = 0.2,
     nthread = 2 # CRAN allows only 2 cores
 )
-predictors <- mldep_model_export(predictors)
+predictors <- mldp_model_export(predictors)
 
 }
