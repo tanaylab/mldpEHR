@@ -472,9 +472,8 @@ mldp_model_features <- function(predictor) {
 #' predictors <- mldp_model_export(predictors)
 #'
 #' @export
-mldp_model_export <- function(models) 
-{
-    purrr::map(models, ~ c(.x[c('model', 'score2quantile', 'age')], feature_names=list(colnames(.x$features))))
+mldp_model_export <- function(models) {
+    purrr::map(models, ~ c(.x[c("model", "score2quantile", "age")], feature_names = list(colnames(.x$features))))
 }
 
 mldp_compute_target_mortality <- function(pop, step, final_outcome) {

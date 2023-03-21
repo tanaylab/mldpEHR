@@ -140,7 +140,7 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
         features_mat <- as.matrix(x[, feature_names])
         if (class(model$model) == "xgb.Booster") {
             scores <- predict(model$model, features_mat)
-        } else { #assuming list of predictors, will compute score for each and then average them out
+        } else { # assuming list of predictors, will compute score for each and then average them out
             scores <- rowMeans(do.call(cbind, purrr::map(model$model, ~ predict(.x, features_mat))))
         }
         quantiles <- rep(NA, length(scores))
