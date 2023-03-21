@@ -444,6 +444,37 @@ mldp_model_features <- function(predictor) {
     return(list(summary = shap_summary, shap_by_patient = shap_id_val, shap_by_fold = shap_fold))
 }
 
+#' Export predictors, stripping all patient data, for future use in inference of external data.
+#'
+#' @param models a list of prediction models (output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}).
+#'
+#' @return a list of with the following members:
+#' \itemize{
+#' \item{model: }{a list of xgboost models, for each fold}
+#' \item{feature_names: }{a vector of expected features used in model}
+#' \item{age: }{the age of patients used in the model}
+#' }
+#'
+#' @examples
+#'
+#' library(ggplot2)
+#' library(dplyr)
+#'
+#' mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
+#' predictors <- mldp_mortality_multi_age_predictors(
+#'     mortality@patients,
+#'     mortality@features,
+#'     survival_years = 5,
+#'     nfolds = 2,
+#'     q_thresh = 0.2,
+#'     nthread = 2 # CRAN allows only 2 cores
+#' )
+#' predictors <- mldp_model_export(predictors)
+#'
+#' @export
+mldp_model_export <- function(models) {
+    purrr::map(models, ~ c(.x[c("model", "score2quantile", "age")], feature_names = list(colnames(.x$features))))
+}
 
 mldp_compute_target_mortality <- function(pop, step, final_outcome) {
     pop %>%
