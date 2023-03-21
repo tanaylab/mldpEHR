@@ -82,7 +82,7 @@ predictors_disease <- mldp_disease_multi_age_predictors(
     nfolds = 2
 )
 markov_disease <- mldp_disease_markov(predictors_disease, 5, qbins = seq(0, 1, by = 0.1))
-
+predictors_disease <- mldp_model_export(predictors_disease)
 new_data <- load_disease_example_data(N = 1e3, num_age_groups = 3)
 
 scores_disease <- mldp_predict_multi_age(
@@ -104,7 +104,6 @@ predictors <- mldp_mortality_multi_age_predictors(
     q_thresh = 0.2,
     nthread = 2 # CRAN allows only 2 cores
 )
-
 new_data <- load_mortality_example_data(N = 1e3, num_age_groups = 3)
 scores <- mldp_predict_multi_age(new_data, predictors)
 

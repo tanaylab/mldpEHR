@@ -54,7 +54,7 @@
 #'     nfolds = 2
 #' )
 #' markov_disease <- mldp_disease_markov(predictors_disease, 5, qbins = seq(0, 1, by = 0.1))
-#'
+#' predictors_disease <- mldp_model_export(predictors_disease)
 #' new_data <- load_disease_example_data(N = 1e3, num_age_groups = 3)
 #'
 #' scores_disease <- mldp_predict_multi_age(
@@ -124,7 +124,11 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
         model_age <- as.character(x$model_age[1])
         model <- predictors[[model_age]]
         # make sure that all features are present in the data. If not, add them with NA
-        feature_names <- setdiff(model$feature_names, "id")
+        if ('feature_names' %in% names(model)) {
+            feature_names <- setdiff(model$feature_names, "id")
+        } else {
+            feature_names <- setdiff(colnames(model$features), "id")
+        }
         for (f in feature_names) {
             if (!f %in% colnames(x)) {
                 cli::cli_alert("Feature {.field {f}} is missing in the data at model age {.val {x$model_age[1]}}. Adding it with NA.")
@@ -170,7 +174,6 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
 #'     q_thresh = 0.2,
 #'     nthread = 2 # CRAN allows only 2 cores
 #' )
-#'
 #' new_data <- load_mortality_example_data(N = 1e3, num_age_groups = 3)
 #' scores <- mldp_predict_multi_age(new_data, predictors)
 #'
