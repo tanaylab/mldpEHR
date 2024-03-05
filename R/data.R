@@ -108,7 +108,7 @@ mldp_download_example_data <- function(output_dir = file.path(getwd(), "examples
     }
 
 
-    for (dataset in names(datasets)) {
+    for (dataset in datasets) {
         if (!(dataset %in% names(datasets_opt))) {
             cli::cli_abort("Dataset must be one of {.field {names(datasets_opt)}}, not {.field {dataset}}")
         }
