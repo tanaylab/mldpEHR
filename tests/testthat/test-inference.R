@@ -13,12 +13,20 @@ new_data <- purrr::map2_dfr(new_data@patients, new_data@features, ~ .x %>%
     dplyr::select(id, sex, age) %>%
     dplyr::left_join(.y, by = "id"))
 
+# xgboost < 2 keeps the feature names in the R object, later versions in the model
+booster_feature_names <- function(booster) {
+    if (!is.null(booster$feature_names)) {
+        return(booster$feature_names)
+    }
+    return(xgboost::getinfo(booster, "feature_name"))
+}
+
 # The average score of boosters(predictor) for each patient, at the age of their model (the patients are at model ages)
 expected_scores <- function(predictors, boosters) {
     boosters <- purrr::as_mapper(boosters)
     purrr::map_dfr(names(predictors), function(age) {
         x <- new_data %>% dplyr::filter(age == !!as.numeric(age))
-        scores <- purrr::map(boosters(predictors[[age]]), ~ predict(.x, as.matrix(x[, .x$feature_names])))
+        scores <- purrr::map(boosters(predictors[[age]]), ~ predict(.x, as.matrix(x[, booster_feature_names(.x)])))
         return(x %>% dplyr::transmute(id, model_age = !!age, expected = rowMeans(do.call(cbind, scores))))
     })
 }
@@ -50,7 +58,7 @@ test_that("each model gets its features in its own order", {
     x <- as.matrix(new_data %>% dplyr::filter(age == 80) %>% dplyr::select(feature1, feature2))
     y <- as.numeric(x[, "feature1"] + rnorm(nrow(x)) > 2)
     train <- function(features) {
-        xgboost::xgb.train(data = xgboost::xgb.DMatrix(x[, features], label = y), params = list(objective = "binary:logistic"), nrounds = 5, nthread = 1)
+        xgboost::xgb.train(data = xgboost::xgb.DMatrix(x[, features], label = y), params = list(objective = "binary:logistic", nthread = 1), nrounds = 5)
     }
     boosters <- list(train(c("feature1", "feature2")), train(c("feature2", "feature1")))
     reordered <- list("80" = list(model = boosters, score2quantile = predictors[["80"]]$score2quantile))

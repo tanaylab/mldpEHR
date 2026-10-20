@@ -174,10 +174,15 @@ predictor_boosters <- function(predictor, use_cv, model_age) {
     return(boosters)
 }
 
-# The features a booster was trained on, in its order - for a booster without feature names, the predictor's features
+# The features a booster was trained on, in its order (xgboost < 2 keeps them in the R object, later versions in the
+# model) - for a booster without feature names, the predictor's features
 predictor_feature_names <- function(predictor, booster) {
     if (!is.null(booster$feature_names)) {
         return(booster$feature_names)
+    }
+    feature_names <- tryCatch(xgboost::getinfo(booster, "feature_name"), error = function(e) NULL)
+    if (length(feature_names) > 0) {
+        return(feature_names)
     }
     if (!is.null(predictor$feature_names)) {
         return(setdiff(predictor$feature_names, "id"))

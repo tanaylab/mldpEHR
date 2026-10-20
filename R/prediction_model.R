@@ -324,7 +324,7 @@ mldp_cv_train_outcome <- function(target,
         )
         dtest <- as.matrix(target_features %>% filter(fold == cur_fold) %>% select(-id, -fold, -target_class))
 
-        xgb <- xgboost::xgb.train(data = dtrain, nthread = nthread, params = xgboost_params, nrounds = nrounds, verbose = 1)
+        xgb <- xgboost::xgb.train(data = dtrain, params = utils::modifyList(xgboost_params, list(nthread = nthread)), nrounds = nrounds, verbose = 1)
         train <- target_features %>%
             filter(fold != cur_fold, !is.na(target_class)) %>%
             select(id, fold, target_class) %>%
@@ -349,7 +349,7 @@ mldp_cv_train_outcome <- function(target,
         label = target_features %>% filter(!is.na(target_class)) %>% pull(target_class),
         missing = NA
     )
-    model <- xgboost::xgb.train(data = dtrain, nthread = nthread, params = xgboost_params, nrounds = nrounds, verbose = 1)
+    model <- xgboost::xgb.train(data = dtrain, params = utils::modifyList(xgboost_params, list(nthread = nthread)), nrounds = nrounds, verbose = 1)
 
     score2quantile <- list(
         "male" = ecdf(test %>% filter(sex == 1) %>% pull(predict)),
