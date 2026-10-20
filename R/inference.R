@@ -6,8 +6,10 @@
 #'
 #' @param data A data frame with "id", "age", "sex" and the same features as the training data, or a MldpEHR object. The "age" field should be in years and the "sex" field should contain
 #' 1 for male and 2 for female.
-#' @param predictors A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}.
-#' Note that if predictor model is not a single XGBoost model but a list of models (e.g. from cross validation) then average model score will be computed.
+#' @param predictors A list of predictors, one for each age group, named by age. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors} (or \code{mldp_model_export}).
+#' A predictor whose \code{model} is a list of XGBoost models (e.g. one per cross validation fold) scores by the average of their scores - each model is given the features it was trained on, in its own order.
+#' A predictor with no \code{age} field is used for the age in its name.
+#' @param use_cv Score by the average of the predictor's cross validation models (\code{model_cv}) instead of the model trained on all the data (\code{model}). Defaults to FALSE.
 #' @param markov_models A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.
 #' @param outcome A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") type: and if it fails, it chooses the first outcome in the \code{markov$prob} data frame.
 #' @param years_before_model The number of years to allow the age of the patient to be before the age the model was trained on. e.g., if the model was trained on patients 30-80 years old, and \code{years_before_model} is 5, then patients with age 25-80 would be allowed. Defaults to 5.
@@ -18,7 +20,7 @@
 #' \item{age: }{patient age.}
 #' \item{sex: }{patient sex}
 #' \item{model_age: }{age of the model used to predict}
-#' \item{score: }{the predicted score for the patient}
+#' \item{score: }{the predicted score for the patient (the average score of the models, for several models)}
 #' \item{quantile: }{the quantile of the score of the patient}
 #' \item{prob: }{the predicted life-long probability for the patient (in case \code{markov} is provided)}
 #' }
@@ -41,6 +43,9 @@
 #'
 #' new_data <- load_mortality_example_data(N = 1e3, num_age_groups = 3)
 #' scores <- mldp_predict_multi_age(new_data, predictors, markov, "death")
+#'
+#' # The average score of the cross validation models
+#' scores_cv <- mldp_predict_multi_age(new_data, predictors, markov, "death", use_cv = TRUE)
 #'
 #' # For diseases
 #'
@@ -67,7 +72,7 @@
 #' head(scores)
 #'
 #' @export
-mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outcome = NULL, years_before_model = 5) {
+mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outcome = NULL, years_before_model = 5, use_cv = FALSE) {
     if (is(data, "MldpEHR")) {
         data <- purrr::map2_dfr(data@patients, data@features, function(p, f) {
             p %>%
@@ -91,7 +96,7 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
         cli::cli_abort("The {.field sex} column should contain 1 for male and 2 for female")
     }
 
-    model_ages <- purrr::map_dbl(predictors, "age")
+    model_ages <- purrr::map2_dbl(predictors, names(predictors), ~ if (is.null(.x$age)) as.numeric(.y) else .x$age)
     rev_model_ages <- rev(model_ages)
 
     # for each patient, find closest age to model_ages after the patient's age
@@ -123,26 +128,20 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
         x <- as_tibble(x)
         model_age <- as.character(x$model_age[1])
         model <- predictors[[model_age]]
+        boosters <- predictor_boosters(model, use_cv, model_age)
+        # each booster gets the features it was trained on, in its order
+        booster_features <- purrr::map(boosters, ~ predictor_feature_names(model, .x))
+
         # make sure that all features are present in the data. If not, add them with NA
-        if ('feature_names' %in% names(model)) {
-            feature_names <- setdiff(model$feature_names, "id")
-        } else {
-            feature_names <- setdiff(colnames(model$features), "id")
-        }
-        for (f in feature_names) {
+        for (f in unique(unlist(booster_features))) {
             if (!f %in% colnames(x)) {
                 cli::cli_alert("Feature {.field {f}} is missing in the data at model age {.val {x$model_age[1]}}. Adding it with NA.")
                 x[[f]] <- NA
             }
         }
 
-        # predict scores
-        features_mat <- as.matrix(x[, feature_names])
-        if (class(model$model) == "xgb.Booster") {
-            scores <- predict(model$model, features_mat)
-        } else { # assuming list of predictors, will compute score for each and then average them out
-            scores <- rowMeans(do.call(cbind, purrr::map(model$model, ~ predict(.x, features_mat))))
-        }
+        # predict scores - the average score of the boosters
+        scores <- rowMeans(do.call(cbind, purrr::map2(boosters, booster_features, ~ predict(.x, as.matrix(x[, .y])))))
         quantiles <- rep(NA, length(scores))
         quantiles[x$sex == 1] <- model$score2quantile[[1]](scores[x$sex == 1])
         quantiles[x$sex == 2] <- model$score2quantile[[2]](scores[x$sex == 2])
@@ -156,6 +155,34 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
     }
 
     return(scores)
+}
+
+# The boosters a predictor scores with: its cross validation models (use_cv), or its model - which is either a single
+# booster or a list of boosters (e.g. one per cross validation fold)
+predictor_boosters <- function(predictor, use_cv, model_age) {
+    boosters <- predictor$model
+    if (use_cv) {
+        if (!is.null(predictor$model_cv)) {
+            boosters <- predictor$model_cv
+        } else if (inherits(boosters, "xgb.Booster")) {
+            cli::cli_abort("The predictor of age {.val {model_age}} has no cross validation models ({.field model_cv})")
+        }
+    }
+    if (inherits(boosters, "xgb.Booster")) {
+        boosters <- list(boosters)
+    }
+    return(boosters)
+}
+
+# The features a booster was trained on, in its order - for a booster without feature names, the predictor's features
+predictor_feature_names <- function(predictor, booster) {
+    if (!is.null(booster$feature_names)) {
+        return(booster$feature_names)
+    }
+    if (!is.null(predictor$feature_names)) {
+        return(setdiff(predictor$feature_names, "id"))
+    }
+    return(setdiff(colnames(predictor$features), "id"))
 }
 
 #' Calculate the probability of a disease or death given model scores

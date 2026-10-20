@@ -450,7 +450,9 @@ mldp_model_features <- function(predictor) {
 #'
 #' @return a list of with the following members:
 #' \itemize{
-#' \item{model: }{a list of xgboost models, for each fold}
+#' \item{model: }{the xgboost model trained on all the data}
+#' \item{model_cv: }{a list of xgboost models, for each cross validation fold}
+#' \item{score2quantile: }{the score to quantile functions, for males and females}
 #' \item{feature_names: }{a vector of expected features used in model}
 #' \item{age: }{the age of patients used in the model}
 #' }
@@ -473,7 +475,7 @@ mldp_model_features <- function(predictor) {
 #'
 #' @export
 mldp_model_export <- function(models) {
-    purrr::map(models, ~ c(.x[c("model", "score2quantile", "age")], feature_names = list(colnames(.x$features))))
+    purrr::map(models, ~ c(.x[intersect(c("model", "model_cv", "score2quantile", "age"), names(.x))], feature_names = list(colnames(.x$features))))
 }
 
 mldp_compute_target_mortality <- function(pop, step, final_outcome) {

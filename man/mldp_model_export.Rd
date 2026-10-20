@@ -12,7 +12,9 @@ mldp_model_export(models)
 \value{
 a list of with the following members:
 \itemize{
-\item{model: }{a list of xgboost models, for each fold}
+\item{model: }{the xgboost model trained on all the data}
+\item{model_cv: }{a list of xgboost models, for each cross validation fold}
+\item{score2quantile: }{the score to quantile functions, for males and females}
 \item{feature_names: }{a vector of expected features used in model}
 \item{age: }{the age of patients used in the model}
 }

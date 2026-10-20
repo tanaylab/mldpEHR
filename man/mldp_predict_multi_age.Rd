@@ -10,7 +10,8 @@ mldp_predict_multi_age(
   predictors,
   markov_models = NULL,
   outcome = NULL,
-  years_before_model = 5
+  years_before_model = 5,
+  use_cv = FALSE
 )
 
 mldp_score_to_prob(
@@ -24,14 +25,17 @@ mldp_score_to_prob(
 \item{data}{A data frame with "id", "age", "sex" and the same features as the training data, or a MldpEHR object. The "age" field should be in years and the "sex" field should contain
 1 for male and 2 for female.}
 
-\item{predictors}{A list of predictors, one for each age group. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}.
-Note that if predictor model is not a single XGBoost model but a list of models (e.g. from cross validation) then average model score will be computed.}
+\item{predictors}{A list of predictors, one for each age group, named by age. Output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors} (or \code{mldp_model_export}).
+A predictor whose \code{model} is a list of XGBoost models (e.g. one per cross validation fold) scores by the average of their scores - each model is given the features it was trained on, in its own order.
+A predictor with no \code{age} field is used for the age in its name.}
 
 \item{markov_models}{A Markov model, output of \code{mldp_mortality_markov} or \code{mldp_disease_markov}. Can be NULL, and then only scores are calculated.}
 
 \item{outcome}{A character vector indicating the outcome to calculate the life-long probabilities for. For mortality models use \code{"death"} and for disease models please use \code{c("disease", "disease_death")}. If NULL, the function would try to infer which outcome to use ("death" or "disease + disease_death") type: and if it fails, it chooses the first outcome in the \code{markov$prob} data frame.}
 
 \item{years_before_model}{The number of years to allow the age of the patient to be before the age the model was trained on. e.g., if the model was trained on patients 30-80 years old, and \code{years_before_model} is 5, then patients with age 25-80 would be allowed. Defaults to 5.}
+
+\item{use_cv}{Score by the average of the predictor's cross validation models (\code{model_cv}) instead of the model trained on all the data (\code{model}). Defaults to FALSE.}
 
 \item{scores}{A data frame with model scores. Output of \code{mldp_predict_multi_age}.}
 }
@@ -42,7 +46,7 @@ a data frame with the following columns:
 \item{age: }{patient age.}
 \item{sex: }{patient sex}
 \item{model_age: }{age of the model used to predict}
-\item{score: }{the predicted score for the patient}
+\item{score: }{the predicted score for the patient (the average score of the models, for several models)}
 \item{quantile: }{the quantile of the score of the patient}
 \item{prob: }{the predicted life-long probability for the patient (in case \code{markov} is provided)}
 }
@@ -69,6 +73,9 @@ predictors <- mldp_model_export(predictors)
 
 new_data <- load_mortality_example_data(N = 1e3, num_age_groups = 3)
 scores <- mldp_predict_multi_age(new_data, predictors, markov, "death")
+
+# The average score of the cross validation models
+scores_cv <- mldp_predict_multi_age(new_data, predictors, markov, "death", use_cv = TRUE)
 
 # For diseases
 
