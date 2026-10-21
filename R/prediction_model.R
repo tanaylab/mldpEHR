@@ -282,7 +282,7 @@ mldp_cv_train_outcome <- function(target,
                                       gamma = 0,
                                       eval_metric = "auc"
                                   ),
-                                  nthread = paralell::detectCores(),
+                                  nthread = parallel::detectCores(),
                                   nrounds = 1000) {
     if (folds < 2) {
         cli::cli_abort("number of folds must be at least 2")
@@ -320,11 +320,16 @@ mldp_cv_train_outcome <- function(target,
         dtrain <- xgboost::xgb.DMatrix(
             data = as.matrix(target_features %>% filter(fold != cur_fold, !is.na(target_class)) %>% select(-id, -fold, -target_class)),
             label = target_features %>% filter(fold != cur_fold, !is.na(target_class)) %>% pull(target_class),
-            missing = NA
+            missing = NA,
+            nthread = nthread
         )
-        dtest <- as.matrix(target_features %>% filter(fold == cur_fold) %>% select(-id, -fold, -target_class))
+        dtest <- xgboost::xgb.DMatrix(
+            data = as.matrix(target_features %>% filter(fold == cur_fold) %>% select(-id, -fold, -target_class)),
+            missing = NA,
+            nthread = nthread
+        )
 
-        xgb <- xgboost::xgb.train(data = dtrain, nthread = nthread, params = xgboost_params, nrounds = nrounds, verbose = 1)
+        xgb <- xgboost::xgb.train(data = dtrain, params = utils::modifyList(xgboost_params, list(nthread = nthread)), nrounds = nrounds, verbose = 1)
         train <- target_features %>%
             filter(fold != cur_fold, !is.na(target_class)) %>%
             select(id, fold, target_class) %>%
@@ -347,9 +352,10 @@ mldp_cv_train_outcome <- function(target,
     dtrain <- xgboost::xgb.DMatrix(
         data = as.matrix(target_features %>% filter(!is.na(target_class)) %>% select(-id, -fold, -target_class)),
         label = target_features %>% filter(!is.na(target_class)) %>% pull(target_class),
-        missing = NA
+        missing = NA,
+        nthread = nthread
     )
-    model <- xgboost::xgb.train(data = dtrain, nthread = nthread, params = xgboost_params, nrounds = nrounds, verbose = 1)
+    model <- xgboost::xgb.train(data = dtrain, params = utils::modifyList(xgboost_params, list(nthread = nthread)), nrounds = nrounds, verbose = 1)
 
     score2quantile <- list(
         "male" = ecdf(test %>% filter(sex == 1) %>% pull(predict)),
@@ -444,6 +450,41 @@ mldp_model_features <- function(predictor) {
     return(list(summary = shap_summary, shap_by_patient = shap_id_val, shap_by_fold = shap_fold))
 }
 
+#' Export predictors for future use in inference of external data.
+#'
+#' @description Keeps only the models, the score to quantile functions, the feature names and the age. Note that the score to quantile functions are empirical CDFs that hold the out-of-fold score of every training patient (without ids).
+#'
+#' @param models a list of prediction models (output of \code{mldp_mortality_multi_age_predictors} or \code{mldp_disease_multi_age_predictors}).
+#'
+#' @return a list of with the following members:
+#' \itemize{
+#' \item{model: }{the xgboost model trained on all the data}
+#' \item{model_cv: }{a list of xgboost models, for each cross validation fold}
+#' \item{score2quantile: }{the score to quantile functions, for males and females}
+#' \item{feature_names: }{a vector of expected features used in model}
+#' \item{age: }{the age of patients used in the model}
+#' }
+#'
+#' @examples
+#'
+#' library(ggplot2)
+#' library(dplyr)
+#'
+#' mortality <- load_mortality_example_data(N = 100, num_age_groups = 3)
+#' predictors <- mldp_mortality_multi_age_predictors(
+#'     mortality@patients,
+#'     mortality@features,
+#'     survival_years = 5,
+#'     nfolds = 2,
+#'     q_thresh = 0.2,
+#'     nthread = 2 # CRAN allows only 2 cores
+#' )
+#' predictors <- mldp_model_export(predictors)
+#'
+#' @export
+mldp_model_export <- function(models) {
+    purrr::map(models, ~ c(.x[intersect(c("model", "model_cv", "score2quantile", "age"), names(.x))], feature_names = list(if (is.null(.x$features)) .x$feature_names else colnames(.x$features))))
+}
 
 mldp_compute_target_mortality <- function(pop, step, final_outcome) {
     pop %>%
