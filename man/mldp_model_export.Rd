@@ -2,7 +2,7 @@
 % Please edit documentation in R/prediction_model.R
 \name{mldp_model_export}
 \alias{mldp_model_export}
-\title{Export predictors, stripping all patient data, for future use in inference of external data.}
+\title{Export predictors for future use in inference of external data.}
 \usage{
 mldp_model_export(models)
 }
@@ -20,7 +20,7 @@ a list of with the following members:
 }
 }
 \description{
-Export predictors, stripping all patient data, for future use in inference of external data.
+Keeps only the models, the score to quantile functions, the feature names and the age. Note that the score to quantile functions are empirical CDFs that hold the out-of-fold score of every training patient (without ids).
 }
 \examples{
 

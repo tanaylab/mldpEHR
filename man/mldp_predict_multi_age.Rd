@@ -86,7 +86,8 @@ predictors_disease <- mldp_disease_multi_age_predictors(
     disease_data@patients,
     disease_data@features,
     target_years = 5,
-    nfolds = 2
+    nfolds = 2,
+    nthread = 2 # CRAN allows only 2 cores
 )
 markov_disease <- mldp_disease_markov(predictors_disease, 5, qbins = seq(0, 1, by = 0.1))
 predictors_disease <- mldp_model_export(predictors_disease)

@@ -56,7 +56,8 @@
 #'     disease_data@patients,
 #'     disease_data@features,
 #'     target_years = 5,
-#'     nfolds = 2
+#'     nfolds = 2,
+#'     nthread = 2 # CRAN allows only 2 cores
 #' )
 #' markov_disease <- mldp_disease_markov(predictors_disease, 5, qbins = seq(0, 1, by = 0.1))
 #' predictors_disease <- mldp_model_export(predictors_disease)
@@ -96,12 +97,18 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
         cli::cli_abort("The {.field sex} column should contain 1 for male and 2 for female")
     }
 
-    model_ages <- purrr::map2_dbl(predictors, names(predictors), ~ if (is.null(.x$age)) as.numeric(.y) else .x$age)
-    rev_model_ages <- rev(model_ages)
+    predictor_names <- if (is.null(names(predictors))) rep("", length(predictors)) else names(predictors)
+    model_ages <- purrr::map2_dbl(predictors, predictor_names, ~ if (is.null(.x$age)) suppressWarnings(as.numeric(.y)) else .x$age)
+    if (any(is.na(model_ages))) {
+        cli::cli_abort("Each predictor needs an age: an {.field age} field or a numeric name")
+    }
+    # look up predictors by their model age
+    names(predictors) <- model_ages
+    sorted_model_ages <- sort(model_ages)
 
     # for each patient, find closest age to model_ages after the patient's age
     get_patient_model_age <- function(age) {
-        ma <- rev_model_ages[rev_model_ages >= age][1]
+        ma <- sorted_model_ages[sorted_model_ages >= age][1]
         if (is.na(ma)) {
             return(NA)
         }
@@ -160,7 +167,7 @@ mldp_predict_multi_age <- function(data, predictors, markov_models = NULL, outco
 # The boosters a predictor scores with: its cross validation models (use_cv), or its model - which is either a single
 # booster or a list of boosters (e.g. one per cross validation fold)
 predictor_boosters <- function(predictor, use_cv, model_age) {
-    boosters <- predictor$model
+    boosters <- predictor[["model"]] # not $, which partially matches model_cv
     if (use_cv) {
         if (!is.null(predictor$model_cv)) {
             boosters <- predictor$model_cv
@@ -170,6 +177,9 @@ predictor_boosters <- function(predictor, use_cv, model_age) {
     }
     if (inherits(boosters, "xgb.Booster")) {
         boosters <- list(boosters)
+    }
+    if (length(boosters) == 0) {
+        cli::cli_abort("The predictor of age {.val {model_age}} has no {.field model}")
     }
     return(boosters)
 }

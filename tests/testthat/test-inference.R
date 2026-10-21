@@ -77,3 +77,31 @@ test_that("use_cv fails for predictors without cross validation models", {
     single <- purrr::map(predictors, ~ .x[c("model", "score2quantile", "age")])
     expect_error(mldp_predict_multi_age(new_data, single, use_cv = TRUE), "no cross validation models")
 })
+
+test_that("an unnamed list of predictors uses their age fields", {
+    expect_equal(mldp_predict_multi_age(new_data, unname(predictors)), mldp_predict_multi_age(new_data, predictors))
+})
+
+test_that("predictors without an age field or a numeric name fail", {
+    no_age <- purrr::map(unname(predictors), ~ .x[c("model", "score2quantile")])
+    expect_error(mldp_predict_multi_age(new_data, no_age), "needs an age")
+})
+
+test_that("a predictor without a model fails", {
+    no_model <- purrr::map(predictors, ~ .x[c("model_cv", "score2quantile", "age")])
+    expect_error(mldp_predict_multi_age(new_data, no_model), "has no")
+})
+
+test_that("a booster without feature names gets the predictor's features", {
+    x <- as.matrix(new_data %>% dplyr::filter(age == 80) %>% dplyr::select(feature2, feature1))
+    y <- as.numeric(x[, "feature1"] + rnorm(nrow(x)) > 2)
+    booster <- xgboost::xgb.train(data = xgboost::xgb.DMatrix(unname(x), label = y), params = list(objective = "binary:logistic", nthread = 1), nrounds = 5)
+    unnamed <- list("80" = list(model = booster, score2quantile = predictors[["80"]]$score2quantile, feature_names = c("id", "feature2", "feature1")))
+    scores <- mldp_predict_multi_age(new_data %>% dplyr::filter(age == 80), unnamed)
+    expect_equal(scores$score, predict(booster, unname(x)), tolerance = 1e-6)
+})
+
+test_that("exporting twice keeps the feature names", {
+    exported <- mldp_model_export(predictors)
+    expect_equal(mldp_model_export(exported), exported)
+})
